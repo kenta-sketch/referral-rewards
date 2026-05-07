@@ -25,7 +25,7 @@ async function verifyHmac(payload: string, signatureHex: string, secret: string)
   } catch {
     return false;
   }
-  return crypto.subtle.verify("HMAC", key, sigBytes, enc.encode(payload));
+  return crypto.subtle.verify("HMAC", key, sigBytes.buffer as ArrayBuffer, enc.encode(payload));
 }
 
 async function verifyToken(token: string): Promise<boolean> {
@@ -66,4 +66,5 @@ export async function middleware(request: NextRequest) {
 export const config = {
   matcher: ["/admin/:path*"],
 };
+
 
