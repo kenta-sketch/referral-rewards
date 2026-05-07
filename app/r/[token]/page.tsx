@@ -1,0 +1,252 @@
+import { notFound } from "next/navigation";
+import Link from "next/link";
+import { supabaseAdmin } from "@/lib/supabase";
+import {
+  formatYen,
+  formatDate,
+  dealStatusLabel,
+  paymentStatusLabel,
+  receiptTypeLabel,
+} from "@/lib/format";
+import type { Member, Payout, Deal } from "@/lib/types";
+import { ReceiptTypeSelector } from "./_components/ReceiptTypeSelector";
+
+export const dynamic = "force-dynamic";
+
+async function loadDashboard(token: string) {
+  const { data: member, error: memberErr } = await supabaseAdmin
+    .from("members")
+    .select("*")
+    .eq("access_token", token)
+    .maybeSingle();
+
+  if (memberErr) throw memberErr;
+  if (!member) return null;
+
+  const { data: payouts, error: payoutsErr } = await supabaseAdmin
+    .from("payouts")
+    .select("*, deal:deals(*)")
+    .eq("member_id", member.id)
+    .order("created_at", { ascending: false });
+
+  if (payoutsErr) throw payoutsErr;
+
+  const { data: tossedUpDeals, error: dealsErr } = await supabaseAdmin
+    .from("deals")
+    .select("*")
+    .eq("toss_up_member_id", member.id)
+    .order("tossed_up_at", { ascending: false });
+
+  if (dealsErr) throw dealsErr;
+
+  return {
+    member: member as Member,
+    payouts: (payouts ?? []) as (Payout & { deal: Deal })[],
+    tossedUpDeals: (tossedUpDeals ?? []) as Deal[],
+  };
+}
+
+function summarize(payouts: (Payout & { deal: Deal })[]) {
+  let chosenTotal = 0;
+  let taxedTotal = 0;
+  let deferredTotal = 0;
+  let unpaidChosen = 0;
+  let paidChosen = 0;
+  let scheduledChosen = 0;
+
+  for (const p of payouts) {
+    if (p.deal.status !== "confirmed") continue;
+    const chosen = p.receipt_type === "deferred" ? p.amount_deferred_yen : p.amount_taxed_yen;
+    chosenTotal += chosen;
+    taxedTotal += p.amount_taxed_yen;
+    deferredTotal += p.amount_deferred_yen;
+    if (p.payment_status === "unpaid") unpaidChosen += chosen;
+    else if (p.payment_status === "scheduled") scheduledChosen += chosen;
+    else if (p.payment_status === "paid") paidChosen += chosen;
+  }
+  return { chosenTotal, taxedTotal, deferredTotal, unpaidChosen, paidChosen, scheduledChosen };
+}
+
+export default async function MemberDashboard({
+  params,
+}: {
+  params: Promise<{ token: string }>;
+}) {
+  const { token } = await params;
+  const data = await loadDashboard(token);
+  if (!data) notFound();
+
+  const { member, payouts, tossedUpDeals } = data;
+  const sum = summarize(payouts);
+
+  return (
+    <div className="max-w-5xl mx-auto p-4 md:p-8 w-full">
+      <header className="mb-6 flex items-center justify-between">
+        <div>
+          <p className="text-xs text-gray-500">担当者</p>
+          <h1 className="text-2xl font-bold">{member.name} さん</h1>
+        </div>
+        <Link href={`/r/${token}/toss-up`} className="btn-primary">
+          + 案件をトスアップ
+        </Link>
+      </header>
+
+      {/* サマリーカード */}
+      <section className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+        <div className="card p-5">
+          <p className="text-xs text-gray-500">あなたが選択した受取総額</p>
+          <p className="text-3xl font-bold mt-1">{formatYen(sum.chosenTotal)}</p>
+          <p className="text-xs text-gray-400 mt-2">確定済み案件のみ</p>
+        </div>
+        <div className="card p-5">
+          <p className="text-xs text-gray-500">即時受取（税込）でまとめると</p>
+          <p className="text-2xl font-semibold mt-1">{formatYen(sum.taxedTotal)}</p>
+          <p className="text-xs text-gray-400 mt-2">案件単価10万円ベース</p>
+        </div>
+        <div className="card p-5 bg-gradient-to-br from-amber-50 to-white">
+          <p className="text-xs text-amber-700">繰延受取（翌年以降・3倍）</p>
+          <p className="text-2xl font-semibold mt-1">{formatYen(sum.deferredTotal)}</p>
+          <p className="text-xs text-gray-400 mt-2">案件単価30万円ベース</p>
+        </div>
+      </section>
+
+      {/* 支払いステータス */}
+      <section className="grid grid-cols-3 gap-3 mb-6 text-sm">
+        <div className="card p-3 text-center">
+          <p className="text-xs text-gray-500">未払い</p>
+          <p className="font-semibold text-red-700">{formatYen(sum.unpaidChosen)}</p>
+        </div>
+        <div className="card p-3 text-center">
+          <p className="text-xs text-gray-500">支払予定</p>
+          <p className="font-semibold text-blue-700">{formatYen(sum.scheduledChosen)}</p>
+        </div>
+        <div className="card p-3 text-center">
+          <p className="text-xs text-gray-500">支払済</p>
+          <p className="font-semibold text-green-700">{formatYen(sum.paidChosen)}</p>
+        </div>
+      </section>
+
+      {/* 報酬一覧 */}
+      <section className="card mb-6 overflow-hidden">
+        <div className="px-5 py-3 border-b border-gray-200 flex items-center justify-between">
+          <h2 className="font-semibold">あなたへの配分</h2>
+          <span className="text-xs text-gray-500">{payouts.length} 件</span>
+        </div>
+        {payouts.length === 0 ? (
+          <p className="p-6 text-sm text-gray-500 text-center">
+            まだ確定した配分はありません。
+          </p>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead className="bg-gray-50 text-xs text-gray-500">
+                <tr>
+                  <th className="text-left px-4 py-2 font-medium">案件</th>
+                  <th className="text-right px-4 py-2 font-medium">即時（税込）</th>
+                  <th className="text-right px-4 py-2 font-medium">繰延（×3）</th>
+                  <th className="text-center px-4 py-2 font-medium">受取方式</th>
+                  <th className="text-center px-4 py-2 font-medium">支払い</th>
+                </tr>
+              </thead>
+              <tbody>
+                {payouts.map((p) => {
+                  const ds = dealStatusLabel(p.deal.status);
+                  const ps = paymentStatusLabel(p.payment_status);
+                  return (
+                    <tr key={p.id} className="border-t border-gray-100">
+                      <td className="px-4 py-3">
+                        <p className="font-medium">{p.deal.client_name}</p>
+                        <p className="text-xs text-gray-500 mt-0.5">
+                          実施 {p.deal.actual_headcount ?? "—"}名 ／{" "}
+                          <span className={`badge ${ds.cls}`}>{ds.label}</span>
+                        </p>
+                      </td>
+                      <td className="px-4 py-3 text-right">
+                        <span className={p.receipt_type === "taxed" ? "font-semibold" : "text-gray-400"}>
+                          {formatYen(p.amount_taxed_yen)}
+                        </span>
+                      </td>
+                      <td className="px-4 py-3 text-right">
+                        <span className={p.receipt_type === "deferred" ? "font-semibold text-amber-700" : "text-gray-400"}>
+                          {formatYen(p.amount_deferred_yen)}
+                        </span>
+                      </td>
+                      <td className="px-4 py-3 text-center">
+                        <ReceiptTypeSelector
+                          token={token}
+                          payoutId={p.id}
+                          current={p.receipt_type}
+                          disabled={p.payment_status === "paid"}
+                        />
+                      </td>
+                      <td className="px-4 py-3 text-center">
+                        <span className={`badge ${ps.cls}`}>{ps.label}</span>
+                        {p.scheduled_payment_date && (
+                          <p className="text-xs text-gray-500 mt-1">
+                            予定: {formatDate(p.scheduled_payment_date)}
+                          </p>
+                        )}
+                        {p.paid_at && (
+                          <p className="text-xs text-gray-500 mt-1">
+                            完了: {formatDate(p.paid_at)}
+                          </p>
+                        )}
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </section>
+
+      {/* トスアップ履歴 */}
+      <section className="card overflow-hidden">
+        <div className="px-5 py-3 border-b border-gray-200 flex items-center justify-between">
+          <h2 className="font-semibold">あなたがトスアップした案件</h2>
+          <span className="text-xs text-gray-500">{tossedUpDeals.length} 件</span>
+        </div>
+        {tossedUpDeals.length === 0 ? (
+          <p className="p-6 text-sm text-gray-500 text-center">
+            まだトスアップ案件はありません。
+          </p>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead className="bg-gray-50 text-xs text-gray-500">
+                <tr>
+                  <th className="text-left px-4 py-2 font-medium">紹介先</th>
+                  <th className="text-right px-4 py-2 font-medium">予定人数</th>
+                  <th className="text-right px-4 py-2 font-medium">実施人数</th>
+                  <th className="text-center px-4 py-2 font-medium">ステータス</th>
+                  <th className="text-left px-4 py-2 font-medium">トスアップ日</th>
+                </tr>
+              </thead>
+              <tbody>
+                {tossedUpDeals.map((d) => {
+                  const ds = dealStatusLabel(d.status);
+                  return (
+                    <tr key={d.id} className="border-t border-gray-100">
+                      <td className="px-4 py-3 font-medium">{d.client_name}</td>
+                      <td className="px-4 py-3 text-right">{d.expected_headcount ?? "—"}</td>
+                      <td className="px-4 py-3 text-right">{d.actual_headcount ?? "—"}</td>
+                      <td className="px-4 py-3 text-center">
+                        <span className={`badge ${ds.cls}`}>{ds.label}</span>
+                      </td>
+                      <td className="px-4 py-3 text-gray-600">{formatDate(d.tossed_up_at)}</td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </section>
+
+      <p className="text-xs text-gray-400 mt-8 text-center">
+        このページはあなた専用です。URLを他人と共有しないでください。
+      </p>
+    </div>
+  );
+}
