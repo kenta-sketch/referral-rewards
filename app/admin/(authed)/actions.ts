@@ -1,4 +1,4 @@
-"use server";
+﻿"use server";
 
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
@@ -6,8 +6,7 @@ import { supabaseAdmin } from "@/lib/supabase";
 import { requireAdmin } from "@/lib/auth";
 
 // =====================
-// メンバー操作
-// =====================
+// 繝｡繝ｳ繝舌・謫堺ｽ・// =====================
 
 export async function createMemberAction(formData: FormData): Promise<void> {
   await requireAdmin();
@@ -17,7 +16,7 @@ export async function createMemberAction(formData: FormData): Promise<void> {
   const parentIdRaw = String(formData.get("parent_id") ?? "").trim();
   const parent_id = parentIdRaw || null;
 
-  if (!name) throw new Error("氏名は必須です");
+  if (!name) throw new Error("豌丞錐縺ｯ蠢・医〒縺・);
 
   const { error } = await supabaseAdmin.from("members").insert({
     name,
@@ -41,9 +40,9 @@ export async function updateMemberAction(formData: FormData): Promise<void> {
   const isActive = formData.get("is_active") === "on";
   const notes = String(formData.get("notes") ?? "").trim() || null;
 
-  if (!id) throw new Error("ID不正");
-  if (!name) throw new Error("氏名は必須です");
-  if (parent_id === id) throw new Error("自分を親にすることはできません");
+  if (!id) throw new Error("ID荳肴ｭ｣");
+  if (!name) throw new Error("豌丞錐縺ｯ蠢・医〒縺・);
+  if (parent_id === id) throw new Error("閾ｪ蛻・ｒ隕ｪ縺ｫ縺吶ｋ縺薙→縺ｯ縺ｧ縺阪∪縺帙ｓ");
 
   const { error } = await supabaseAdmin
     .from("members")
@@ -57,10 +56,9 @@ export async function updateMemberAction(formData: FormData): Promise<void> {
 export async function regenerateMemberTokenAction(formData: FormData): Promise<void> {
   await requireAdmin();
   const id = String(formData.get("id") ?? "");
-  if (!id) throw new Error("ID不正");
+  if (!id) throw new Error("ID荳肴ｭ｣");
 
-  // Web Crypto API でランダムなトークンを生成（48文字のhex）
-  const bytes = new Uint8Array(24);
+  // Web Crypto API 縺ｧ繝ｩ繝ｳ繝繝縺ｪ繝医・繧ｯ繝ｳ繧堤函謌撰ｼ・8譁・ｭ励・hex・・  const bytes = new Uint8Array(24);
   crypto.getRandomValues(bytes);
   const token = Array.from(bytes)
     .map((b) => b.toString(16).padStart(2, "0"))
@@ -76,8 +74,7 @@ export async function regenerateMemberTokenAction(formData: FormData): Promise<v
 }
 
 // =====================
-// 案件操作
-// =====================
+// 譯井ｻｶ謫堺ｽ・// =====================
 
 export async function confirmDealAction(formData: FormData): Promise<void> {
   await requireAdmin();
@@ -86,9 +83,9 @@ export async function confirmDealAction(formData: FormData): Promise<void> {
   const closerIdRaw = String(formData.get("closer_member_id") ?? "").trim();
   const closer_member_id = closerIdRaw || null;
 
-  if (!id) throw new Error("ID不正");
+  if (!id) throw new Error("ID荳肴ｭ｣");
   if (!Number.isFinite(actualHeadcount) || actualHeadcount < 1) {
-    throw new Error("実施人数は1以上の整数で入力してください");
+    throw new Error("螳滓命莠ｺ謨ｰ縺ｯ1莉･荳翫・謨ｴ謨ｰ縺ｧ蜈･蜉帙＠縺ｦ縺上□縺輔＞");
   }
 
   const { error } = await supabaseAdmin.rpc("confirm_deal", {
@@ -105,17 +102,16 @@ export async function confirmDealAction(formData: FormData): Promise<void> {
 export async function cancelDealAction(formData: FormData): Promise<void> {
   await requireAdmin();
   const id = String(formData.get("id") ?? "");
-  if (!id) throw new Error("ID不正");
+  if (!id) throw new Error("ID荳肴ｭ｣");
 
-  // 確定済みかどうかでpayoutsの扱いが変わる
-  const { data: deal } = await supabaseAdmin
+  // 遒ｺ螳壽ｸ医∩縺九←縺・°縺ｧpayouts縺ｮ謇ｱ縺・′螟峨ｏ繧・  const { data: deal } = await supabaseAdmin
     .from("deals")
     .select("status")
     .eq("id", id)
     .maybeSingle();
 
   if (deal?.status === "confirmed") {
-    // 配分を全削除
+    // 驟榊・繧貞・蜑企勁
     const { error: delErr } = await supabaseAdmin.from("payouts").delete().eq("deal_id", id);
     if (delErr) throw delErr;
   }
@@ -137,8 +133,8 @@ export async function createDealAction(formData: FormData): Promise<void> {
   const expected_headcount = expectedRaw ? Number(expectedRaw) : null;
   const notes = String(formData.get("notes") ?? "").trim() || null;
 
-  if (!client_name) throw new Error("紹介先名は必須です");
-  if (!toss_up_member_id) throw new Error("トスアップ者は必須です");
+  if (!client_name) throw new Error("邏ｹ莉句・蜷阪・蠢・医〒縺・);
+  if (!toss_up_member_id) throw new Error("繝医せ繧｢繝・・閠・・蠢・医〒縺・);
 
   const { error } = await supabaseAdmin.from("deals").insert({
     client_name,
@@ -153,8 +149,7 @@ export async function createDealAction(formData: FormData): Promise<void> {
 }
 
 // =====================
-// 配分（payouts）操作
-// =====================
+// 驟榊・・・ayouts・画桃菴・// =====================
 
 export async function updatePayoutAction(formData: FormData): Promise<void> {
   await requireAdmin();
@@ -164,9 +159,9 @@ export async function updatePayoutAction(formData: FormData): Promise<void> {
   const paid = String(formData.get("paid_at") ?? "").trim() || null;
   const notes = String(formData.get("notes") ?? "").trim() || null;
 
-  if (!id) throw new Error("ID不正");
+  if (!id) throw new Error("ID荳肴ｭ｣");
   if (!["unpaid", "scheduled", "paid"].includes(payment_status)) {
-    throw new Error("ステータス不正");
+    throw new Error("繧ｹ繝・・繧ｿ繧ｹ荳肴ｭ｣");
   }
 
   const update: Record<string, unknown> = {
@@ -187,3 +182,4 @@ export async function updatePayoutAction(formData: FormData): Promise<void> {
   revalidatePath("/admin");
   if (payout?.deal_id) revalidatePath(`/admin/deals/${payout.deal_id}`);
 }
+

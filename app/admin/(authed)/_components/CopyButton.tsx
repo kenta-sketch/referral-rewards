@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useState } from "react";
 
@@ -13,12 +13,13 @@ export function CopyButton({ text }: { text: string }) {
           setCopied(true);
           setTimeout(() => setCopied(false), 1500);
         } catch {
-          alert("コピーに失敗しました。手動でコピーしてください。");
+          alert("繧ｳ繝斐・縺ｫ螟ｱ謨励＠縺ｾ縺励◆縲よ焔蜍輔〒繧ｳ繝斐・縺励※縺上□縺輔＞縲・);
         }
       }}
       className="btn-secondary text-xs whitespace-nowrap"
     >
-      {copied ? "コピー済" : "コピー"}
+      {copied ? "繧ｳ繝斐・貂・ : "繧ｳ繝斐・"}
     </button>
   );
 }
+
