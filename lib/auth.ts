@@ -1,4 +1,4 @@
-﻿import { cookies } from "next/headers";
+import { cookies } from "next/headers";
 import { createHmac, timingSafeEqual } from "crypto";
 
 const COOKIE_NAME = "admin_session";
@@ -20,7 +20,8 @@ function safeEq(a: string, b: string): boolean {
 }
 
 /**
- * 邂｡逅・・Ο繧ｰ繧､繝ｳ繧定ｩｦ縺ｿ繧九よ・蜉滓凾縺ｫCookie繧偵そ繝・ヨ縲・ */
+ * 管理者ログインを試みる。成功時にCookieをセット。
+ */
 export async function attemptAdminLogin(password: string): Promise<boolean> {
   const expected = process.env.ADMIN_PASSWORD;
   if (!expected) return false;
@@ -48,7 +49,8 @@ export async function logoutAdmin(): Promise<void> {
 }
 
 /**
- * 迴ｾ蝨ｨ縺ｮ繝ｪ繧ｯ繧ｨ繧ｹ繝医′邂｡逅・・→縺励※譛牙柑縺九ｒ遒ｺ隱阪・ */
+ * 現在のリクエストが管理者として有効かを確認。
+ */
 export async function isAdminAuthenticated(): Promise<boolean> {
   const cookieStore = await cookies();
   const token = cookieStore.get(COOKIE_NAME)?.value;
@@ -70,11 +72,11 @@ export async function isAdminAuthenticated(): Promise<boolean> {
 }
 
 /**
- * Server Actions / Route Handlers 縺ｮ蜀帝ｭ縺ｧ蜻ｼ繧薙〒邂｡逅・・〒縺ｪ縺代ｌ縺ｰ throw 縺吶ｋ縲・ */
+ * Server Actions / Route Handlers の冒頭で呼んで管理者でなければ throw する。
+ */
 export async function requireAdmin(): Promise<void> {
   const ok = await isAdminAuthenticated();
   if (!ok) {
     throw new Error("Unauthorized");
   }
 }
-

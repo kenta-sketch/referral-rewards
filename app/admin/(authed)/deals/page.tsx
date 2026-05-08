@@ -1,4 +1,4 @@
-﻿import Link from "next/link";
+import Link from "next/link";
 import { supabaseAdmin } from "@/lib/supabase";
 import { dealStatusLabel, formatDate } from "@/lib/format";
 
@@ -34,24 +34,24 @@ export default async function DealsPage() {
   return (
     <div className="max-w-6xl mx-auto p-4 md:p-8 w-full">
       <header className="mb-6 flex items-center justify-between">
-        <h1 className="text-2xl font-bold">譯井ｻｶ</h1>
-        <Link href="/admin/deals/new" className="btn-primary">+ 譯井ｻｶ繧定ｿｽ蜉</Link>
+        <h1 className="text-2xl font-bold">案件</h1>
+        <Link href="/admin/deals/new" className="btn-primary">+ 案件を追加</Link>
       </header>
 
       <div className="card overflow-hidden">
         {rows.length === 0 ? (
-          <p className="p-6 text-sm text-gray-500 text-center">譯井ｻｶ縺後∪縺縺ゅｊ縺ｾ縺帙ｓ</p>
+          <p className="p-6 text-sm text-gray-500 text-center">案件がまだありません</p>
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead className="bg-gray-50 text-xs text-gray-500">
                 <tr>
-                  <th className="text-left px-4 py-2 font-medium">邏ｹ莉句・</th>
-                  <th className="text-left px-4 py-2 font-medium">繝医せ繧｢繝・・</th>
-                  <th className="text-left px-4 py-2 font-medium">繧ｯ繝ｭ繝ｼ繧ｶ繝ｼ</th>
-                  <th className="text-right px-4 py-2 font-medium">莠亥ｮ・螳滓命</th>
-                  <th className="text-center px-4 py-2 font-medium">迥ｶ諷・/th>
-                  <th className="text-left px-4 py-2 font-medium">譌･莉・/th>
+                  <th className="text-left px-4 py-2 font-medium">紹介先</th>
+                  <th className="text-left px-4 py-2 font-medium">トスアップ</th>
+                  <th className="text-left px-4 py-2 font-medium">クローザー</th>
+                  <th className="text-right px-4 py-2 font-medium">予定/実施</th>
+                  <th className="text-center px-4 py-2 font-medium">状態</th>
+                  <th className="text-left px-4 py-2 font-medium">日付</th>
                   <th className="text-right px-4 py-2"></th>
                 </tr>
               </thead>
@@ -61,10 +61,10 @@ export default async function DealsPage() {
                   return (
                     <tr key={d.id} className="border-t border-gray-100">
                       <td className="px-4 py-3 font-medium">{d.client_name}</td>
-                      <td className="px-4 py-3 text-gray-600">{d.toss_up_member?.name ?? "窶・}</td>
-                      <td className="px-4 py-3 text-gray-600">{d.closer_member?.name ?? "窶・}</td>
+                      <td className="px-4 py-3 text-gray-600">{d.toss_up_member?.name ?? "—"}</td>
+                      <td className="px-4 py-3 text-gray-600">{d.closer_member?.name ?? "—"}</td>
                       <td className="px-4 py-3 text-right">
-                        {d.expected_headcount ?? "窶・} / {d.actual_headcount ?? "窶・}
+                        {d.expected_headcount ?? "—"} / {d.actual_headcount ?? "—"}
                       </td>
                       <td className="px-4 py-3 text-center">
                         <span className={`badge ${ds.cls}`}>{ds.label}</span>
@@ -72,7 +72,8 @@ export default async function DealsPage() {
                       <td className="px-4 py-3 text-gray-600">{formatDate(d.tossed_up_at)}</td>
                       <td className="px-4 py-3 text-right">
                         <Link href={`/admin/deals/${d.id}`} className="text-xs text-slate-700 hover:underline">
-                          隧ｳ邏ｰ 竊・                        </Link>
+                          詳細 →
+                        </Link>
                       </td>
                     </tr>
                   );
@@ -85,4 +86,3 @@ export default async function DealsPage() {
     </div>
   );
 }
-

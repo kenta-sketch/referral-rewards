@@ -1,13 +1,14 @@
-﻿import { NextResponse, type NextRequest } from "next/server";
+import { NextResponse, type NextRequest } from "next/server";
 
 const COOKIE_NAME = "admin_session";
 
-function hexToBytes(hex: string): Uint8Array {
-  const out = new Uint8Array(hex.length / 2);
-  for (let i = 0; i < out.length; i++) {
-    out[i] = parseInt(hex.slice(i * 2, i * 2 + 2), 16);
+function hexToArrayBuffer(hex: string): ArrayBuffer {
+  const buf = new ArrayBuffer(hex.length / 2);
+  const view = new Uint8Array(buf);
+  for (let i = 0; i < view.length; i++) {
+    view[i] = parseInt(hex.slice(i * 2, i * 2 + 2), 16);
   }
-  return out;
+  return buf;
 }
 
 async function verifyHmac(payload: string, signatureHex: string, secret: string): Promise<boolean> {
@@ -19,13 +20,13 @@ async function verifyHmac(payload: string, signatureHex: string, secret: string)
     false,
     ["verify"]
   );
-  let sigBytes: Uint8Array;
+  let sigBuffer: ArrayBuffer;
   try {
-    sigBytes = hexToBytes(signatureHex);
+    sigBuffer = hexToArrayBuffer(signatureHex);
   } catch {
     return false;
   }
-  return crypto.subtle.verify("HMAC", key, sigBytes.buffer as ArrayBuffer, enc.encode(payload));
+  return crypto.subtle.verify("HMAC", key, sigBuffer, enc.encode(payload));
 }
 
 async function verifyToken(token: string): Promise<boolean> {
@@ -66,6 +67,3 @@ export async function middleware(request: NextRequest) {
 export const config = {
   matcher: ["/admin/:path*"],
 };
-
-
-

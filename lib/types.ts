@@ -1,4 +1,4 @@
-﻿export type Member = {
+export type Member = {
   id: string;
   name: string;
   email: string | null;
@@ -50,4 +50,3 @@ export type Payout = {
 export type PayoutWithDeal = Payout & {
   deal: Deal;
 };
-

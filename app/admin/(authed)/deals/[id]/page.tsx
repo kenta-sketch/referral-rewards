@@ -26,7 +26,7 @@ export default async function DealDetailPage({
     supabaseAdmin
       .from("deals")
       .select(
-        "*, toss_up_member:members!deals_toss_up_member_id_fkey(id, name), closer_member:members!deals_closer_member_id_fkey(id, name)"
+        "*, toss_up_member:members!toss_up_member_id(id, name), closer_member:members!closer_member_id(id, name)"
       )
       .eq("id", id)
       .maybeSingle(),
@@ -37,7 +37,7 @@ export default async function DealDetailPage({
 
   const { data: payouts } = await supabaseAdmin
     .from("payouts")
-    .select("*, member:members!payouts_member_id_fkey(id, name)")
+    .select("*, member:members!member_id(id, name)")
     .eq("deal_id", id)
     .order("tier");
 

@@ -1,4 +1,4 @@
-﻿import Link from "next/link";
+import Link from "next/link";
 import { logoutAdmin } from "@/lib/auth";
 import { redirect } from "next/navigation";
 
@@ -18,24 +18,26 @@ export default function AuthedAdminLayout({
       <header className="bg-slate-900 text-white">
         <div className="max-w-6xl mx-auto px-4 py-3 flex items-center justify-between">
           <Link href="/admin" className="font-bold">
-            邏ｹ莉句ｱ驟ｬ邂｡逅・" "}
-            <span className="text-xs font-normal text-slate-300 ml-2">邂｡逅・判髱｢</span>
+            紹介報酬管理{" "}
+            <span className="text-xs font-normal text-slate-300 ml-2">管理画面</span>
           </Link>
           <nav className="flex items-center gap-1 text-sm">
             <Link href="/admin" className="px-3 py-1.5 rounded hover:bg-slate-800">
-              繧ｵ繝槭Μ繝ｼ
+              サマリー
             </Link>
             <Link href="/admin/members" className="px-3 py-1.5 rounded hover:bg-slate-800">
-              諡・ｽ楢・            </Link>
+              担当者
+            </Link>
             <Link href="/admin/deals" className="px-3 py-1.5 rounded hover:bg-slate-800">
-              譯井ｻｶ
+              案件
             </Link>
             <form action={logoutAction}>
               <button
                 type="submit"
                 className="px-3 py-1.5 rounded hover:bg-slate-800 text-slate-300"
               >
-                繝ｭ繧ｰ繧｢繧ｦ繝・              </button>
+                ログアウト
+              </button>
             </form>
           </nav>
         </div>
@@ -44,4 +46,3 @@ export default function AuthedAdminLayout({
     </div>
   );
 }
-

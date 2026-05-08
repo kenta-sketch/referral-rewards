@@ -1,4 +1,4 @@
-﻿import { redirect } from "next/navigation";
+import { redirect } from "next/navigation";
 import { attemptAdminLogin, isAdminAuthenticated } from "@/lib/auth";
 
 export const dynamic = "force-dynamic";
@@ -26,12 +26,12 @@ export default async function AdminLoginPage({
     <main className="flex-1 flex items-center justify-center p-6">
       <form action={loginAction} className="card p-8 w-full max-w-sm flex flex-col gap-4">
         <div className="text-center">
-          <h1 className="text-xl font-bold">邂｡逅・・Ο繧ｰ繧､繝ｳ</h1>
-          <p className="text-sm text-gray-500 mt-1">邏ｹ莉句ｱ驟ｬ邂｡逅・/p>
+          <h1 className="text-xl font-bold">管理者ログイン</h1>
+          <p className="text-sm text-gray-500 mt-1">紹介報酬管理</p>
         </div>
 
         <div>
-          <label className="label" htmlFor="password">繝代せ繝ｯ繝ｼ繝・/label>
+          <label className="label" htmlFor="password">パスワード</label>
           <input
             id="password"
             name="password"
@@ -44,12 +44,11 @@ export default async function AdminLoginPage({
         </div>
 
         {sp?.error && (
-          <p className="text-sm text-red-600 text-center">繝代せ繝ｯ繝ｼ繝峨′驕輔＞縺ｾ縺・/p>
+          <p className="text-sm text-red-600 text-center">パスワードが違います</p>
         )}
 
-        <button type="submit" className="btn-primary">繝ｭ繧ｰ繧､繝ｳ</button>
+        <button type="submit" className="btn-primary">ログイン</button>
       </form>
     </main>
   );
 }
-
