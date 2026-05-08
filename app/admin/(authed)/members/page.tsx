@@ -9,6 +9,7 @@ type Row = {
   email: string | null;
   parent_id: string | null;
   is_active: boolean;
+  is_closer: boolean;
   access_token: string;
   created_at: string;
   parent: { id: string; name: string } | null;
@@ -17,7 +18,7 @@ type Row = {
 async function loadMembers(): Promise<Row[]> {
   const { data, error } = await supabaseAdmin
     .from("members")
-    .select("id, name, email, parent_id, is_active, access_token, created_at, parent:members!parent_id(id, name)")
+    .select("id, name, email, parent_id, is_active, is_closer, access_token, created_at, parent:members!parent_id(id, name)")
     .order("created_at", { ascending: true });
   if (error) throw error;
   return (data ?? []) as unknown as Row[];
@@ -62,6 +63,9 @@ export default async function MembersPage() {
                           <span className="badge bg-green-100 text-green-800">有効</span>
                         ) : (
                           <span className="badge bg-gray-100 text-gray-600">停止</span>
+                        )}
+                        {r.is_closer && (
+                          <span className="badge bg-purple-100 text-purple-800 ml-1">クローザー</span>
                         )}
                       </td>
                       <td className="px-4 py-3 text-xs">

@@ -33,7 +33,7 @@ async function loadDashboard(token: string) {
 
   const { data: tossedUpDeals, error: dealsErr } = await supabaseAdmin
     .from("deals")
-    .select("*")
+    .select("*, closer_member:members!closer_member_id(id, name)")
     .eq("toss_up_member_id", member.id)
     .order("tossed_up_at", { ascending: false });
 
@@ -42,7 +42,9 @@ async function loadDashboard(token: string) {
   return {
     member: member as Member,
     payouts: (payouts ?? []) as (Payout & { deal: Deal })[],
-    tossedUpDeals: (tossedUpDeals ?? []) as Deal[],
+    tossedUpDeals: (tossedUpDeals ?? []) as (Deal & {
+      closer_member: { id: string; name: string } | null;
+    })[],
   };
 }
 
@@ -81,14 +83,28 @@ export default async function MemberDashboard({
 
   return (
     <div className="max-w-5xl mx-auto p-4 md:p-8 w-full">
-      <header className="mb-6 flex items-center justify-between">
+      <header className="mb-6 flex items-center justify-between gap-4 flex-wrap">
         <div>
           <p className="text-xs text-gray-500">担当者</p>
-          <h1 className="text-2xl font-bold">{member.name} さん</h1>
+          <h1 className="text-2xl font-bold">
+            {member.name} さん
+            {member.is_closer && (
+              <span className="badge bg-purple-100 text-purple-800 ml-2 align-middle text-xs">
+                クロージング担当者
+              </span>
+            )}
+          </h1>
         </div>
-        <Link href={`/r/${token}/toss-up`} className="btn-primary">
-          + 案件をトスアップ
-        </Link>
+        <div className="flex gap-2">
+          {member.is_closer && (
+            <Link href={`/r/${token}/closing`} className="btn-secondary">
+              クロージング管理
+            </Link>
+          )}
+          <Link href={`/r/${token}/toss-up`} className="btn-primary">
+            + 案件をトスアップ
+          </Link>
+        </div>
       </header>
 
       {/* サマリーカード */}
@@ -101,12 +117,12 @@ export default async function MemberDashboard({
         <div className="card p-5">
           <p className="text-xs text-gray-500">即時受取（税込）でまとめると</p>
           <p className="text-2xl font-semibold mt-1">{formatYen(sum.taxedTotal)}</p>
-          <p className="text-xs text-gray-400 mt-2">案件単価10万円ベース</p>
+          <p className="text-xs text-gray-400 mt-2">49名まで18万 / 50名以上20万</p>
         </div>
         <div className="card p-5 bg-gradient-to-br from-amber-50 to-white">
           <p className="text-xs text-amber-700">繰延受取（翌年以降・3倍）</p>
           <p className="text-2xl font-semibold mt-1">{formatYen(sum.deferredTotal)}</p>
-          <p className="text-xs text-gray-400 mt-2">案件単価30万円ベース</p>
+          <p className="text-xs text-gray-400 mt-2">即時の3倍（54万 / 60万）</p>
         </div>
       </section>
 
@@ -217,10 +233,10 @@ export default async function MemberDashboard({
               <thead className="bg-gray-50 text-xs text-gray-500">
                 <tr>
                   <th className="text-left px-4 py-2 font-medium">紹介先</th>
-                  <th className="text-right px-4 py-2 font-medium">予定人数</th>
-                  <th className="text-right px-4 py-2 font-medium">実施人数</th>
+                  <th className="text-right px-4 py-2 font-medium">予定/実施</th>
+                  <th className="text-left px-4 py-2 font-medium">打ち合わせ</th>
+                  <th className="text-left px-4 py-2 font-medium">クローザー</th>
                   <th className="text-center px-4 py-2 font-medium">ステータス</th>
-                  <th className="text-left px-4 py-2 font-medium">トスアップ日</th>
                 </tr>
               </thead>
               <tbody>
@@ -228,13 +244,18 @@ export default async function MemberDashboard({
                   const ds = dealStatusLabel(d.status);
                   return (
                     <tr key={d.id} className="border-t border-gray-100">
-                      <td className="px-4 py-3 font-medium">{d.client_name}</td>
-                      <td className="px-4 py-3 text-right">{d.expected_headcount ?? "—"}</td>
-                      <td className="px-4 py-3 text-right">{d.actual_headcount ?? "—"}</td>
+                      <td className="px-4 py-3 font-medium">
+                        <p>{d.client_name}</p>
+                        <p className="text-xs text-gray-400">{formatDate(d.tossed_up_at)}トスアップ</p>
+                      </td>
+                      <td className="px-4 py-3 text-right">
+                        {d.expected_headcount ?? "—"} / {d.actual_headcount ?? "—"}
+                      </td>
+                      <td className="px-4 py-3 text-gray-600">{formatDate(d.meeting_date)}</td>
+                      <td className="px-4 py-3 text-gray-600">{d.closer_member?.name ?? "—"}</td>
                       <td className="px-4 py-3 text-center">
                         <span className={`badge ${ds.cls}`}>{ds.label}</span>
                       </td>
-                      <td className="px-4 py-3 text-gray-600">{formatDate(d.tossed_up_at)}</td>
                     </tr>
                   );
                 })}

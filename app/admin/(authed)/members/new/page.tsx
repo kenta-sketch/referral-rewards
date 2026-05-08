@@ -54,6 +54,18 @@ export default async function NewMemberPage() {
             </p>
           </div>
 
+          <div className="flex items-center gap-2">
+            <input
+              id="is_closer"
+              name="is_closer"
+              type="checkbox"
+              className="rounded border-gray-300"
+            />
+            <label htmlFor="is_closer" className="text-sm">
+              クロージング担当者（全案件のクロージング操作ができる）
+            </label>
+          </div>
+
           <div className="flex gap-2 pt-2">
             <button type="submit" className="btn-primary">追加</button>
             <Link href="/admin/members" className="btn-secondary">キャンセル</Link>

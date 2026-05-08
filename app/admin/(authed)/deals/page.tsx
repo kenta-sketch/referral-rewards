@@ -11,6 +11,7 @@ type Row = {
   expected_headcount: number | null;
   actual_headcount: number | null;
   tossed_up_at: string;
+  meeting_date: string | null;
   toss_up_member: { id: string; name: string } | null;
   closer_member: { id: string; name: string } | null;
 };
@@ -19,7 +20,7 @@ async function loadDeals(): Promise<Row[]> {
   const { data, error } = await supabaseAdmin
     .from("deals")
     .select(
-      "id, client_name, status, expected_headcount, actual_headcount, tossed_up_at," +
+      "id, client_name, status, expected_headcount, actual_headcount, tossed_up_at, meeting_date," +
         "toss_up_member:members!toss_up_member_id(id, name)," +
         "closer_member:members!closer_member_id(id, name)"
     )
@@ -50,8 +51,9 @@ export default async function DealsPage() {
                   <th className="text-left px-4 py-2 font-medium">トスアップ</th>
                   <th className="text-left px-4 py-2 font-medium">クローザー</th>
                   <th className="text-right px-4 py-2 font-medium">予定/実施</th>
+                  <th className="text-left px-4 py-2 font-medium">打ち合わせ</th>
                   <th className="text-center px-4 py-2 font-medium">状態</th>
-                  <th className="text-left px-4 py-2 font-medium">日付</th>
+                  <th className="text-left px-4 py-2 font-medium">トスアップ日</th>
                   <th className="text-right px-4 py-2"></th>
                 </tr>
               </thead>
@@ -66,6 +68,7 @@ export default async function DealsPage() {
                       <td className="px-4 py-3 text-right">
                         {d.expected_headcount ?? "—"} / {d.actual_headcount ?? "—"}
                       </td>
+                      <td className="px-4 py-3 text-gray-600">{formatDate(d.meeting_date)}</td>
                       <td className="px-4 py-3 text-center">
                         <span className={`badge ${ds.cls}`}>{ds.label}</span>
                       </td>

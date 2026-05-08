@@ -16,6 +16,7 @@ export async function createMemberAction(formData: FormData): Promise<void> {
   const phone = String(formData.get("phone") ?? "").trim() || null;
   const parentIdRaw = String(formData.get("parent_id") ?? "").trim();
   const parent_id = parentIdRaw || null;
+  const isCloser = formData.get("is_closer") === "on";
 
   if (!name) throw new Error("氏名は必須です");
 
@@ -24,6 +25,7 @@ export async function createMemberAction(formData: FormData): Promise<void> {
     email,
     phone,
     parent_id,
+    is_closer: isCloser,
   });
   if (error) throw error;
   revalidatePath("/admin/members");
@@ -39,6 +41,7 @@ export async function updateMemberAction(formData: FormData): Promise<void> {
   const parentIdRaw = String(formData.get("parent_id") ?? "").trim();
   const parent_id = parentIdRaw || null;
   const isActive = formData.get("is_active") === "on";
+  const isCloser = formData.get("is_closer") === "on";
   const notes = String(formData.get("notes") ?? "").trim() || null;
 
   if (!id) throw new Error("ID不正");
@@ -47,11 +50,37 @@ export async function updateMemberAction(formData: FormData): Promise<void> {
 
   const { error } = await supabaseAdmin
     .from("members")
-    .update({ name, email, phone, parent_id, is_active: isActive, notes })
+    .update({
+      name,
+      email,
+      phone,
+      parent_id,
+      is_active: isActive,
+      is_closer: isCloser,
+      notes,
+    })
     .eq("id", id);
   if (error) throw error;
   revalidatePath("/admin/members");
   revalidatePath(`/admin/members/${id}`);
+}
+
+export async function deleteMemberAction(formData: FormData): Promise<void> {
+  await requireAdmin();
+  const id = String(formData.get("id") ?? "");
+  if (!id) throw new Error("ID不正");
+
+  const { error } = await supabaseAdmin.rpc("delete_member", { p_member_id: id });
+  if (error) {
+    // 案件・配分があって削除できない場合
+    throw new Error(
+      error.message?.includes("紐づいている")
+        ? "この担当者は案件または配分に紐づいているため削除できません。代わりに「無効」にチェックを外してください。"
+        : error.message
+    );
+  }
+  revalidatePath("/admin/members");
+  redirect("/admin/members");
 }
 
 export async function regenerateMemberTokenAction(formData: FormData): Promise<void> {
@@ -85,6 +114,8 @@ export async function confirmDealAction(formData: FormData): Promise<void> {
   const actualHeadcount = Number(formData.get("actual_headcount"));
   const closerIdRaw = String(formData.get("closer_member_id") ?? "").trim();
   const closer_member_id = closerIdRaw || null;
+  const meetingDateRaw = String(formData.get("meeting_date") ?? "").trim();
+  const meeting_date = meetingDateRaw || null;
 
   if (!id) throw new Error("ID不正");
   if (!Number.isFinite(actualHeadcount) || actualHeadcount < 1) {
@@ -95,11 +126,32 @@ export async function confirmDealAction(formData: FormData): Promise<void> {
     p_deal_id: id,
     p_actual_headcount: Math.floor(actualHeadcount),
     p_closer_member_id: closer_member_id,
+    p_meeting_date: meeting_date,
   });
   if (error) throw error;
   revalidatePath("/admin/deals");
   revalidatePath(`/admin/deals/${id}`);
   revalidatePath("/admin");
+}
+
+export async function setMeetingDateAction(formData: FormData): Promise<void> {
+  await requireAdmin();
+  const id = String(formData.get("id") ?? "");
+  const meetingDateRaw = String(formData.get("meeting_date") ?? "").trim();
+  const meeting_date = meetingDateRaw || null;
+  const closerIdRaw = String(formData.get("closer_member_id") ?? "").trim();
+  const closer_member_id = closerIdRaw || null;
+
+  if (!id) throw new Error("ID不正");
+
+  const { error } = await supabaseAdmin.rpc("set_meeting_date", {
+    p_deal_id: id,
+    p_meeting_date: meeting_date,
+    p_closer_member_id: closer_member_id,
+  });
+  if (error) throw error;
+  revalidatePath("/admin/deals");
+  revalidatePath(`/admin/deals/${id}`);
 }
 
 export async function cancelDealAction(formData: FormData): Promise<void> {

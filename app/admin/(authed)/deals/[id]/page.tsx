@@ -12,6 +12,7 @@ import {
   confirmDealAction,
   cancelDealAction,
   updatePayoutAction,
+  setMeetingDateAction,
 } from "../../actions";
 
 export const dynamic = "force-dynamic";
@@ -83,6 +84,10 @@ export default async function DealDetailPage({
             <dt className="text-xs text-gray-500">クロージング担当</dt>
             <dd className="font-medium">{deal.closer_member?.name ?? "—"}</dd>
           </div>
+          <div>
+            <dt className="text-xs text-gray-500">打ち合わせ日</dt>
+            <dd className="font-medium">{formatDate(deal.meeting_date)}</dd>
+          </div>
           {deal.notes && (
             <div className="col-span-2">
               <dt className="text-xs text-gray-500">メモ</dt>
@@ -93,48 +98,102 @@ export default async function DealDetailPage({
       </div>
 
       {!isCanceled && !isConfirmed && (
-        <div className="card p-6 mb-4">
-          <h2 className="font-semibold mb-2">案件を確定する</h2>
-          <p className="text-xs text-gray-500 mb-4">
-            実施人数とクローザーを確定すると、配分が自動計算されて担当者に表示されます。
-          </p>
-          <form action={confirmDealAction} className="flex flex-col gap-4">
-            <input type="hidden" name="id" value={deal.id} />
+        <>
+          <div className="card p-6 mb-4">
+            <h2 className="font-semibold mb-2">打ち合わせ日を設定</h2>
+            <p className="text-xs text-gray-500 mb-4">
+              クロージング担当者と打ち合わせ予定日を入れておくと、トスアップ者にも進捗が伝わります（確定はまだしません）。
+            </p>
+            <form action={setMeetingDateAction} className="flex flex-col gap-3">
+              <input type="hidden" name="id" value={deal.id} />
+              <div>
+                <label className="label" htmlFor="meeting_date">打ち合わせ日</label>
+                <input
+                  id="meeting_date"
+                  name="meeting_date"
+                  type="date"
+                  defaultValue={deal.meeting_date ?? ""}
+                  className="input"
+                />
+              </div>
+              <div>
+                <label className="label" htmlFor="closer_member_id_pre">クロージング担当（任意）</label>
+                <select
+                  id="closer_member_id_pre"
+                  name="closer_member_id"
+                  defaultValue={deal.closer_member?.id ?? ""}
+                  className="input"
+                >
+                  <option value="">未設定</option>
+                  {(members ?? []).map((m) => (
+                    <option key={m.id} value={m.id}>{m.name}</option>
+                  ))}
+                </select>
+              </div>
+              <button type="submit" className="btn-secondary">打ち合わせ日を保存</button>
+            </form>
+          </div>
 
-            <div>
-              <label className="label" htmlFor="actual_headcount">
-                実施人数 <span className="text-red-500">*</span>
-              </label>
-              <input
-                id="actual_headcount"
-                name="actual_headcount"
-                type="number"
-                min={1}
-                required
-                defaultValue={deal.expected_headcount ?? ""}
-                className="input"
-              />
-            </div>
+          <div className="card p-6 mb-4">
+            <h2 className="font-semibold mb-2">案件を確定する</h2>
+            <p className="text-xs text-gray-500 mb-4">
+              打ち合わせ後、実施人数を入れて確定すると配分が自動計算されます。
+              人数によって単価が変わります（49名まで18万円／50名以上20万円）。
+            </p>
+            <form action={confirmDealAction} className="flex flex-col gap-4">
+              <input type="hidden" name="id" value={deal.id} />
 
-            <div>
-              <label className="label" htmlFor="closer_member_id">クローザー（任意）</label>
-              <select id="closer_member_id" name="closer_member_id" defaultValue="" className="input">
-                <option value="">未設定</option>
-                {(members ?? []).map((m) => (
-                  <option key={m.id} value={m.id}>{m.name}</option>
-                ))}
-              </select>
-            </div>
+              <div>
+                <label className="label" htmlFor="actual_headcount">
+                  実施人数 <span className="text-red-500">*</span>
+                </label>
+                <input
+                  id="actual_headcount"
+                  name="actual_headcount"
+                  type="number"
+                  min={1}
+                  required
+                  defaultValue={deal.expected_headcount ?? ""}
+                  className="input"
+                />
+              </div>
 
-            <button type="submit" className="btn-primary">確定して配分計算</button>
-          </form>
-          <form action={cancelDealAction} className="mt-3">
-            <input type="hidden" name="id" value={deal.id} />
-            <button type="submit" className="text-xs text-red-700 hover:underline">
-              この案件をキャンセル
-            </button>
-          </form>
-        </div>
+              <div>
+                <label className="label" htmlFor="closer_member_id">クローザー（任意）</label>
+                <select
+                  id="closer_member_id"
+                  name="closer_member_id"
+                  defaultValue={deal.closer_member?.id ?? ""}
+                  className="input"
+                >
+                  <option value="">未設定</option>
+                  {(members ?? []).map((m) => (
+                    <option key={m.id} value={m.id}>{m.name}</option>
+                  ))}
+                </select>
+              </div>
+
+              <div>
+                <label className="label" htmlFor="meeting_date_confirm">打ち合わせ日（任意）</label>
+                <input
+                  id="meeting_date_confirm"
+                  name="meeting_date"
+                  type="date"
+                  defaultValue={deal.meeting_date ?? ""}
+                  className="input"
+                />
+              </div>
+
+              <button type="submit" className="btn-primary">確定して配分計算</button>
+            </form>
+            <form action={cancelDealAction} className="mt-3">
+              <input type="hidden" name="id" value={deal.id} />
+              <button type="submit" className="text-xs text-red-700 hover:underline">
+                この案件をキャンセル
+              </button>
+            </form>
+          </div>
+        </>
       )}
 
       {isConfirmed && (

@@ -6,6 +6,7 @@ export type Member = {
   parent_id: string | null;
   access_token: string;
   is_active: boolean;
+  is_closer: boolean;
   notes: string | null;
   created_at: string;
   updated_at: string;
@@ -21,6 +22,7 @@ export type Deal = {
   unit_price_taxed_yen: number;
   unit_price_deferred_yen: number;
   status: "tossed_up" | "confirmed" | "canceled";
+  meeting_date: string | null;
   notes: string | null;
   tossed_up_at: string;
   confirmed_at: string | null;
