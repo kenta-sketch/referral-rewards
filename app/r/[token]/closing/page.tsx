@@ -19,7 +19,11 @@ type DealRow = {
   meeting_date: string | null;
   tossed_up_at: string;
   notes: string | null;
-  toss_up_member: { id: string; name: string } | null;
+  toss_up_member: {
+    id: string;
+    name: string;
+    parent: { id: string; name: string } | null;
+  } | null;
 };
 
 async function loadAll(token: string) {
@@ -36,7 +40,7 @@ async function loadAll(token: string) {
   const { data: deals, error: dealsErr } = await supabaseAdmin
     .from("deals")
     .select(
-      "id, client_name, status, expected_headcount, actual_headcount, meeting_date, tossed_up_at, notes, toss_up_member:members!toss_up_member_id(id, name)"
+      "id, client_name, status, expected_headcount, actual_headcount, meeting_date, tossed_up_at, notes, toss_up_member:members!toss_up_member_id(id, name, parent:members!parent_id(id, name))"
     )
     .order("meeting_date", { ascending: true, nullsFirst: false });
 
@@ -145,7 +149,11 @@ function DealCard({
         <div>
           <p className="font-semibold">{deal.client_name}</p>
           <p className="text-xs text-gray-500 mt-0.5">
-            トスアップ：{deal.toss_up_member?.name ?? "—"}（{formatDate(deal.tossed_up_at)}）
+            トスアップ：{deal.toss_up_member?.name ?? "—"}
+            {deal.toss_up_member?.parent && (
+              <span className="text-gray-400">（経由：{deal.toss_up_member.parent.name}）</span>
+            )}
+            （{formatDate(deal.tossed_up_at)}）
           </p>
           {deal.notes && (
             <p className="text-xs text-gray-600 mt-1 whitespace-pre-wrap">{deal.notes}</p>

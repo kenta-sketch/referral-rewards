@@ -39,12 +39,42 @@ async function loadDashboard(token: string) {
 
   if (dealsErr) throw dealsErr;
 
+  // 配下メンバー（descendants）を再帰取得
+  const { data: descendants } = await supabaseAdmin.rpc("get_descendants", {
+    p_member_id: member.id,
+  });
+  const descendantIds = (descendants ?? []).map(
+    (d: { id: string; depth: number }) => d.id
+  );
+
+  type DescendantDeal = Deal & {
+    toss_up_member: {
+      id: string;
+      name: string;
+      parent: { id: string; name: string } | null;
+    } | null;
+    closer_member: { id: string; name: string } | null;
+  };
+
+  let descendantDeals: DescendantDeal[] = [];
+  if (descendantIds.length > 0) {
+    const { data } = await supabaseAdmin
+      .from("deals")
+      .select(
+        "*, toss_up_member:members!toss_up_member_id(id, name, parent:members!parent_id(id, name)), closer_member:members!closer_member_id(id, name)"
+      )
+      .in("toss_up_member_id", descendantIds)
+      .order("tossed_up_at", { ascending: false });
+    descendantDeals = (data ?? []) as unknown as DescendantDeal[];
+  }
+
   return {
     member: member as Member,
     payouts: (payouts ?? []) as (Payout & { deal: Deal })[],
     tossedUpDeals: (tossedUpDeals ?? []) as (Deal & {
       closer_member: { id: string; name: string } | null;
     })[],
+    descendantDeals,
   };
 }
 
@@ -78,8 +108,14 @@ export default async function MemberDashboard({
   const data = await loadDashboard(token);
   if (!data) notFound();
 
-  const { member, payouts, tossedUpDeals } = data;
+  const { member, payouts, tossedUpDeals, descendantDeals } = data;
   const sum = summarize(payouts);
+
+  const descendantStats = {
+    tossedUp: descendantDeals.filter((d) => d.status === "tossed_up").length,
+    confirmed: descendantDeals.filter((d) => d.status === "confirmed").length,
+    canceled: descendantDeals.filter((d) => d.status === "canceled").length,
+  };
 
   return (
     <div className="max-w-5xl mx-auto p-4 md:p-8 w-full">
@@ -264,6 +300,80 @@ export default async function MemberDashboard({
           </div>
         )}
       </section>
+
+      {/* 配下のトスアップ案件 */}
+      {descendantDeals.length > 0 && (
+        <section className="card mt-6 overflow-hidden">
+          <div className="px-5 py-3 border-b border-gray-200 flex items-center justify-between flex-wrap gap-2">
+            <h2 className="font-semibold">配下メンバーのトスアップ案件</h2>
+            <div className="flex gap-2 text-xs">
+              <span className="badge bg-amber-100 text-amber-800">
+                トスアップ中 {descendantStats.tossedUp}
+              </span>
+              <span className="badge bg-green-100 text-green-800">
+                確定 {descendantStats.confirmed}
+              </span>
+              {descendantStats.canceled > 0 && (
+                <span className="badge bg-gray-100 text-gray-600">
+                  キャンセル {descendantStats.canceled}
+                </span>
+              )}
+            </div>
+          </div>
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead className="bg-gray-50 text-xs text-gray-500">
+                <tr>
+                  <th className="text-left px-4 py-2 font-medium">紹介先</th>
+                  <th className="text-left px-4 py-2 font-medium">トスアップ者</th>
+                  <th className="text-right px-4 py-2 font-medium">予定/実施</th>
+                  <th className="text-left px-4 py-2 font-medium">打ち合わせ</th>
+                  <th className="text-left px-4 py-2 font-medium">クローザー</th>
+                  <th className="text-center px-4 py-2 font-medium">ステータス</th>
+                </tr>
+              </thead>
+              <tbody>
+                {descendantDeals.map((d) => {
+                  const ds = dealStatusLabel(d.status);
+                  const tosser = d.toss_up_member;
+                  const viaParent =
+                    tosser?.parent && tosser.parent.id !== member.id
+                      ? tosser.parent.name
+                      : null;
+                  return (
+                    <tr key={d.id} className="border-t border-gray-100">
+                      <td className="px-4 py-3 font-medium">
+                        <p>{d.client_name}</p>
+                        <p className="text-xs text-gray-400">
+                          {formatDate(d.tossed_up_at)}トスアップ
+                        </p>
+                      </td>
+                      <td className="px-4 py-3">
+                        <p className="text-sm">{tosser?.name ?? "—"}</p>
+                        {viaParent && (
+                          <p className="text-xs text-gray-400">経由：{viaParent}</p>
+                        )}
+                      </td>
+                      <td className="px-4 py-3 text-right">
+                        {d.expected_headcount ?? "—"} / {d.actual_headcount ?? "—"}
+                      </td>
+                      <td className="px-4 py-3 text-gray-600">
+                        {formatDate(d.meeting_date)}
+                      </td>
+                      <td className="px-4 py-3 text-gray-600">
+                        {d.closer_member?.name ?? "—"}
+                      </td>
+                      <td className="px-4 py-3 text-center">
+                        <span className={`badge ${ds.cls}`}>{ds.label}</span>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        </section>
+      )}
 
       <p className="text-xs text-gray-400 mt-8 text-center">
         このページはあなた専用です。URLを他人と共有しないでください。
