@@ -5,12 +5,20 @@ import { formatYen, dealStatusLabel } from "@/lib/format";
 export const dynamic = "force-dynamic";
 
 async function loadStats() {
-  const [{ count: memberCount }, { count: activeMemberCount }, { count: dealCount }, { count: tossedUpCount }, { count: confirmedCount }] = await Promise.all([
+  const [
+    { count: memberCount },
+    { count: activeMemberCount },
+    { count: dealCount },
+    { count: tossedUpCount },
+    { count: confirmedCount },
+    { data: pendingTotalRows },
+  ] = await Promise.all([
     supabaseAdmin.from("members").select("*", { count: "exact", head: true }),
     supabaseAdmin.from("members").select("*", { count: "exact", head: true }).eq("is_active", true),
     supabaseAdmin.from("deals").select("*", { count: "exact", head: true }),
     supabaseAdmin.from("deals").select("*", { count: "exact", head: true }).eq("status", "tossed_up"),
     supabaseAdmin.from("deals").select("*", { count: "exact", head: true }).eq("status", "confirmed"),
+    supabaseAdmin.rpc("calc_pending_total"),
   ]);
 
   // 全配分の合計
@@ -35,6 +43,13 @@ async function loadStats() {
     else if (p.payment_status === "paid") paidTotal += chosen;
   }
 
+  const pendingRow = (pendingTotalRows ?? [])[0] as
+    | { total_taxed_yen: number; total_deferred_yen: number; pending_count: number }
+    | undefined;
+  const pendingTaxed = pendingRow?.total_taxed_yen ?? 0;
+  const pendingDeferred = pendingRow?.total_deferred_yen ?? 0;
+  const pendingCount = pendingRow?.pending_count ?? 0;
+
   return {
     memberCount: memberCount ?? 0,
     activeMemberCount: activeMemberCount ?? 0,
@@ -47,6 +62,9 @@ async function loadStats() {
     unpaidTotal,
     paidTotal,
     scheduledTotal,
+    pendingTaxed,
+    pendingDeferred,
+    pendingCount,
   };
 }
 
@@ -104,7 +122,7 @@ export default async function AdminDashboard() {
 
       <section className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
         <div className="card p-5">
-          <p className="text-xs text-gray-500">受取選択ベース合計</p>
+          <p className="text-xs text-gray-500">受取選択ベース合計（確定済み）</p>
           <p className="text-2xl font-bold mt-1">{formatYen(stats.chosenTotal)}</p>
           <p className="text-xs text-gray-400 mt-2">各受取者の選択を反映</p>
         </div>
@@ -117,6 +135,28 @@ export default async function AdminDashboard() {
           <p className="text-xl font-semibold mt-1">{formatYen(stats.deferredTotal)}</p>
         </div>
       </section>
+
+      {/* 見込み（トスアップ中の総額） */}
+      {stats.pendingCount > 0 && (
+        <section className="card mb-6 p-5 bg-gradient-to-br from-blue-50 to-white border border-blue-200">
+          <div className="flex items-start justify-between gap-3 flex-wrap">
+            <div>
+              <p className="text-xs text-blue-700 font-medium">
+                見込み合計（トスアップ中・予定人数ベース） ／ {stats.pendingCount} 件
+              </p>
+              <p className="text-2xl font-bold mt-1 text-blue-900">
+                {formatYen(stats.pendingTaxed)}
+              </p>
+              <p className="text-xs text-gray-500 mt-1">
+                繰延ベースなら {formatYen(stats.pendingDeferred)}
+              </p>
+            </div>
+            <p className="text-xs text-gray-400 max-w-sm">
+              ※ 確定すると人数によって金額が動きます。打ち合わせ完了でこの見込みが現実になります。
+            </p>
+          </div>
+        </section>
+      )}
 
       <section className="grid grid-cols-3 gap-3 mb-8 text-sm">
         <div className="card p-3 text-center">

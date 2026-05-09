@@ -68,6 +68,22 @@ async function loadDashboard(token: string) {
     descendantDeals = (data ?? []) as unknown as DescendantDeal[];
   }
 
+  // 見込み配分（トスアップ中・予定人数があるもの）
+  const { data: pending } = await supabaseAdmin.rpc("calc_pending_payouts", {
+    p_member_id: member.id,
+  });
+  type PendingRow = {
+    deal_id: string;
+    client_name: string;
+    expected_headcount: number;
+    meeting_date: string | null;
+    tier: number;
+    share_ratio: string;
+    amount_taxed_yen: number;
+    amount_deferred_yen: number;
+  };
+  const pendingPayouts = (pending ?? []) as PendingRow[];
+
   return {
     member: member as Member,
     payouts: (payouts ?? []) as (Payout & { deal: Deal })[],
@@ -75,6 +91,7 @@ async function loadDashboard(token: string) {
       closer_member: { id: string; name: string } | null;
     })[],
     descendantDeals,
+    pendingPayouts,
   };
 }
 
@@ -108,7 +125,7 @@ export default async function MemberDashboard({
   const data = await loadDashboard(token);
   if (!data) notFound();
 
-  const { member, payouts, tossedUpDeals, descendantDeals } = data;
+  const { member, payouts, tossedUpDeals, descendantDeals, pendingPayouts } = data;
   const sum = summarize(payouts);
 
   const descendantStats = {
@@ -116,6 +133,17 @@ export default async function MemberDashboard({
     confirmed: descendantDeals.filter((d) => d.status === "confirmed").length,
     canceled: descendantDeals.filter((d) => d.status === "canceled").length,
   };
+
+  // 見込み合計
+  const pending = pendingPayouts.reduce(
+    (acc, p) => {
+      acc.taxed += p.amount_taxed_yen;
+      acc.deferred += p.amount_deferred_yen;
+      acc.count += 1;
+      return acc;
+    },
+    { taxed: 0, deferred: 0, count: 0 }
+  );
 
   return (
     <div className="max-w-5xl mx-auto p-4 md:p-8 w-full">
@@ -144,7 +172,7 @@ export default async function MemberDashboard({
       </header>
 
       {/* サマリーカード */}
-      <section className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+      <section className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
         <div className="card p-5">
           <p className="text-xs text-gray-500">あなたが選択した受取総額</p>
           <p className="text-3xl font-bold mt-1">{formatYen(sum.chosenTotal)}</p>
@@ -161,6 +189,28 @@ export default async function MemberDashboard({
           <p className="text-xs text-gray-400 mt-2">即時の3倍（54万 / 60万）</p>
         </div>
       </section>
+
+      {/* 見込みカード（モチベーションUP用） */}
+      {pending.count > 0 && (
+        <section className="card mb-6 p-5 bg-gradient-to-br from-blue-50 to-white border border-blue-200">
+          <div className="flex items-start justify-between gap-3">
+            <div>
+              <p className="text-xs text-blue-700 font-medium">見込み（トスアップ中・予定人数ベース）</p>
+              <p className="text-3xl font-bold mt-1 text-blue-900">{formatYen(pending.taxed)}</p>
+              <p className="text-xs text-gray-500 mt-1">
+                即時 {formatYen(pending.taxed)} / 繰延 {formatYen(pending.deferred)}
+              </p>
+            </div>
+            <div className="text-right text-xs text-blue-700">
+              <p className="font-semibold text-base">{pending.count} 件</p>
+              <p>関与中</p>
+            </div>
+          </div>
+          <p className="text-xs text-gray-400 mt-2">
+            ※ 確定すると人数によって金額が動きます。打ち合わせ完了でこの見込みが現実に変わります。
+          </p>
+        </section>
+      )}
 
       {/* 支払いステータス */}
       <section className="grid grid-cols-3 gap-3 mb-6 text-sm">

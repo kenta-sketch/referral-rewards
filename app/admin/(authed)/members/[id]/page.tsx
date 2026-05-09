@@ -18,7 +18,7 @@ export default async function MemberDetailPage({
 }) {
   const { id } = await params;
 
-  const [{ data: member }, { data: candidates }, { data: payouts }, { data: tossedUpDeals }, { data: descendants }] =
+  const [{ data: member }, { data: candidates }, { data: payouts }, { data: tossedUpDeals }, { data: descendants }, { data: pendingRows }] =
     await Promise.all([
       supabaseAdmin.from("members").select("*").eq("id", id).maybeSingle(),
       supabaseAdmin.from("members").select("id, name").neq("id", id).order("name"),
@@ -33,6 +33,7 @@ export default async function MemberDetailPage({
         .eq("toss_up_member_id", id)
         .order("tossed_up_at", { ascending: false }),
       supabaseAdmin.rpc("get_descendants", { p_member_id: id }),
+      supabaseAdmin.rpc("calc_pending_payouts", { p_member_id: id }),
     ]);
 
   if (!member) notFound();
@@ -88,6 +89,24 @@ export default async function MemberDetailPage({
     canceled: tossedUp.filter((d) => d.status === "canceled").length,
   };
 
+  // 見込み（トスアップ中の予想配分）
+  type PendingRow = {
+    deal_id: string;
+    client_name: string;
+    expected_headcount: number;
+    amount_taxed_yen: number;
+    amount_deferred_yen: number;
+  };
+  const pending = ((pendingRows ?? []) as PendingRow[]).reduce(
+    (acc, p) => {
+      acc.taxed += p.amount_taxed_yen;
+      acc.deferred += p.amount_deferred_yen;
+      acc.count += 1;
+      return acc;
+    },
+    { taxed: 0, deferred: 0, count: 0 }
+  );
+
   return (
     <div className="max-w-4xl mx-auto p-4 md:p-8 w-full">
       <div className="mb-4">
@@ -97,30 +116,40 @@ export default async function MemberDetailPage({
       </div>
 
       {/* 個別サマリー */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-3 mb-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mb-3">
         <div className="card p-4">
-          <p className="text-xs text-gray-500">受取選択ベース合計</p>
+          <p className="text-xs text-gray-500">確定済み合計（受取選択ベース）</p>
           <p className="text-2xl font-bold mt-1">{formatYen(chosenTotal)}</p>
           <p className="text-xs text-gray-400 mt-1">
             即時 {formatYen(taxedTotal)} / 繰延 {formatYen(deferredTotal)}
           </p>
         </div>
-        <div className="card p-4">
-          <p className="text-xs text-gray-500">支払い内訳（選択ベース）</p>
-          <p className="text-sm mt-2">
-            <span className="text-red-700 font-semibold">未払 {formatYen(unpaidChosen)}</span>
+        <div className="card p-4 bg-gradient-to-br from-blue-50 to-white border border-blue-200">
+          <p className="text-xs text-blue-700 font-medium">
+            見込み合計（トスアップ中・予定人数ベース） {pending.count} 件
           </p>
-          <p className="text-sm text-blue-700">予定 {formatYen(scheduledChosen)}</p>
-          <p className="text-sm text-green-700">支払済 {formatYen(paidChosen)}</p>
+          <p className="text-2xl font-bold mt-1 text-blue-900">{formatYen(pending.taxed)}</p>
+          <p className="text-xs text-gray-400 mt-1">
+            繰延ベース {formatYen(pending.deferred)}
+          </p>
+        </div>
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mb-4">
+        <div className="card p-4">
+          <p className="text-xs text-gray-500">支払い内訳（選択ベース・確定済み）</p>
+          <div className="flex gap-3 mt-2 text-sm">
+            <span className="text-red-700">未払 {formatYen(unpaidChosen)}</span>
+            <span className="text-blue-700">予定 {formatYen(scheduledChosen)}</span>
+            <span className="text-green-700">支払済 {formatYen(paidChosen)}</span>
+          </div>
         </div>
         <div className="card p-4">
           <p className="text-xs text-gray-500">トスアップ統計</p>
           <p className="text-sm mt-2">
-            自分: 進行 {tossedUpStats.inProgress} / 確定 {tossedUpStats.confirmed}
+            進行 {tossedUpStats.inProgress} / 確定 {tossedUpStats.confirmed}
             {tossedUpStats.canceled > 0 && ` / 取消 ${tossedUpStats.canceled}`}
-          </p>
-          <p className="text-xs text-gray-400 mt-1">
-            配下メンバー数：{descendantCount} 名
+            <span className="text-gray-400 ml-2">配下 {descendantCount} 名</span>
           </p>
         </div>
       </div>
