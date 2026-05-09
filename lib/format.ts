@@ -54,3 +54,25 @@ export function paymentStatusLabel(s: string): { label: string; cls: string } {
 export function receiptTypeLabel(s: string): string {
   return s === "deferred" ? "繰延（翌年以降・3倍）" : "即時受取（税込）";
 }
+
+/**
+ * 人数から単価×人数=総額の表示文字列を返す
+ * 49名まで18万、50名以上20万
+ * 実施人数があれば優先、なければ予定人数
+ */
+export function formatHeadcountBreakdown(
+  expected: number | null | undefined,
+  actual: number | null | undefined
+): { unitText: string; equationText: string; isProspect: boolean } | null {
+  const headcount = actual ?? expected;
+  if (!headcount || headcount <= 0) return null;
+  const unit = headcount < 50 ? 180000 : 200000;
+  const total = unit * headcount;
+  const unitText = headcount < 50 ? "18万" : "20万";
+  const totalText = formatYen(total);
+  return {
+    unitText,
+    equationText: `${unitText} × ${headcount} = ${totalText}`,
+    isProspect: actual == null, // 予定ベース（確定前）
+  };
+}

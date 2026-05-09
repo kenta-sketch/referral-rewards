@@ -7,6 +7,7 @@ import {
   dealStatusLabel,
   paymentStatusLabel,
   receiptTypeLabel,
+  formatHeadcountBreakdown,
 } from "@/lib/format";
 import type { Member, Payout, Deal } from "@/lib/types";
 import { ReceiptTypeSelector } from "./_components/ReceiptTypeSelector";
@@ -320,6 +321,7 @@ export default async function MemberDashboard({
                 <tr>
                   <th className="text-left px-4 py-2 font-medium">紹介先</th>
                   <th className="text-right px-4 py-2 font-medium">予定/実施</th>
+                  <th className="text-left px-4 py-2 font-medium">単価×人数=総額</th>
                   <th className="text-left px-4 py-2 font-medium">打ち合わせ</th>
                   <th className="text-left px-4 py-2 font-medium">クローザー</th>
                   <th className="text-center px-4 py-2 font-medium">ステータス</th>
@@ -328,6 +330,7 @@ export default async function MemberDashboard({
               <tbody>
                 {tossedUpDeals.map((d) => {
                   const ds = dealStatusLabel(d.status);
+                  const calc = formatHeadcountBreakdown(d.expected_headcount, d.actual_headcount);
                   return (
                     <tr key={d.id} className="border-t border-gray-100">
                       <td className="px-4 py-3 font-medium">
@@ -336,6 +339,18 @@ export default async function MemberDashboard({
                       </td>
                       <td className="px-4 py-3 text-right">
                         {d.expected_headcount ?? "—"} / {d.actual_headcount ?? "—"}
+                      </td>
+                      <td className="px-4 py-3 text-sm">
+                        {calc ? (
+                          <span className={calc.isProspect ? "text-blue-700" : "text-gray-700"}>
+                            {calc.equationText}
+                            {calc.isProspect && (
+                              <span className="text-xs text-gray-400 ml-1">（見込）</span>
+                            )}
+                          </span>
+                        ) : (
+                          <span className="text-gray-400">—</span>
+                        )}
                       </td>
                       <td className="px-4 py-3 text-gray-600">{formatDate(d.meeting_date)}</td>
                       <td className="px-4 py-3 text-gray-600">{d.closer_member?.name ?? "—"}</td>
@@ -377,6 +392,7 @@ export default async function MemberDashboard({
                   <th className="text-left px-4 py-2 font-medium">紹介先</th>
                   <th className="text-left px-4 py-2 font-medium">トスアップ者</th>
                   <th className="text-right px-4 py-2 font-medium">予定/実施</th>
+                  <th className="text-left px-4 py-2 font-medium">単価×人数=総額</th>
                   <th className="text-left px-4 py-2 font-medium">打ち合わせ</th>
                   <th className="text-left px-4 py-2 font-medium">クローザー</th>
                   <th className="text-center px-4 py-2 font-medium">ステータス</th>
@@ -390,6 +406,7 @@ export default async function MemberDashboard({
                     tosser?.parent && tosser.parent.id !== member.id
                       ? tosser.parent.name
                       : null;
+                  const calc = formatHeadcountBreakdown(d.expected_headcount, d.actual_headcount);
                   return (
                     <tr key={d.id} className="border-t border-gray-100">
                       <td className="px-4 py-3 font-medium">
@@ -406,6 +423,18 @@ export default async function MemberDashboard({
                       </td>
                       <td className="px-4 py-3 text-right">
                         {d.expected_headcount ?? "—"} / {d.actual_headcount ?? "—"}
+                      </td>
+                      <td className="px-4 py-3 text-sm">
+                        {calc ? (
+                          <span className={calc.isProspect ? "text-blue-700" : "text-gray-700"}>
+                            {calc.equationText}
+                            {calc.isProspect && (
+                              <span className="text-xs text-gray-400 ml-1">（見込）</span>
+                            )}
+                          </span>
+                        ) : (
+                          <span className="text-gray-400">—</span>
+                        )}
                       </td>
                       <td className="px-4 py-3 text-gray-600">
                         {formatDate(d.meeting_date)}

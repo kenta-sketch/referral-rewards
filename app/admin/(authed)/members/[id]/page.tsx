@@ -7,7 +7,12 @@ import {
   deleteMemberAction,
 } from "../../actions";
 import { CopyButton } from "../../_components/CopyButton";
-import { formatYen, formatDate, dealStatusLabel } from "@/lib/format";
+import {
+  formatYen,
+  formatDate,
+  dealStatusLabel,
+  formatHeadcountBreakdown,
+} from "@/lib/format";
 
 export const dynamic = "force-dynamic";
 
@@ -216,6 +221,7 @@ export default async function MemberDetailPage({
                 <tr>
                   <th className="text-left px-4 py-2 font-medium">紹介先</th>
                   <th className="text-right px-4 py-2 font-medium">予定/実施</th>
+                  <th className="text-left px-4 py-2 font-medium">単価×人数=総額</th>
                   <th className="text-left px-4 py-2 font-medium">打合せ</th>
                   <th className="text-center px-4 py-2 font-medium">状態</th>
                 </tr>
@@ -223,6 +229,7 @@ export default async function MemberDetailPage({
               <tbody>
                 {tossedUp.map((d) => {
                   const ds = dealStatusLabel(d.status);
+                  const calc = formatHeadcountBreakdown(d.expected_headcount, d.actual_headcount);
                   return (
                     <tr key={d.id} className="border-t border-gray-100">
                       <td className="px-4 py-3">
@@ -233,6 +240,18 @@ export default async function MemberDetailPage({
                       </td>
                       <td className="px-4 py-3 text-right">
                         {d.expected_headcount ?? "—"} / {d.actual_headcount ?? "—"}
+                      </td>
+                      <td className="px-4 py-3 text-sm">
+                        {calc ? (
+                          <span className={calc.isProspect ? "text-blue-700" : "text-gray-700"}>
+                            {calc.equationText}
+                            {calc.isProspect && (
+                              <span className="text-xs text-gray-400 ml-1">（見込）</span>
+                            )}
+                          </span>
+                        ) : (
+                          <span className="text-gray-400">—</span>
+                        )}
                       </td>
                       <td className="px-4 py-3 text-gray-600">{formatDate(d.meeting_date)}</td>
                       <td className="px-4 py-3 text-center">
