@@ -7,7 +7,6 @@ import {
   dealStatusLabel,
   paymentStatusLabel,
   receiptTypeLabel,
-  formatHeadcountBreakdown,
 } from "@/lib/format";
 import type { Member, Payout, Deal } from "@/lib/types";
 import { ReceiptTypeSelector } from "./_components/ReceiptTypeSelector";
@@ -145,6 +144,33 @@ export default async function MemberDashboard({
     },
     { taxed: 0, deferred: 0, count: 0 }
   );
+
+  // 案件 → 自分の取り分マップ（確定済み payouts と 見込み pendingPayouts を統合）
+  type MyShare = {
+    ratio: number;
+    taxed: number;
+    deferred: number;
+    isPending: boolean;
+  };
+  const myShareByDeal = new Map<string, MyShare>();
+  for (const p of payouts) {
+    myShareByDeal.set(p.deal.id, {
+      ratio: Number(p.share_ratio),
+      taxed: p.amount_taxed_yen,
+      deferred: p.amount_deferred_yen,
+      isPending: false,
+    });
+  }
+  for (const p of pendingPayouts) {
+    if (!myShareByDeal.has(p.deal_id)) {
+      myShareByDeal.set(p.deal_id, {
+        ratio: Number(p.share_ratio),
+        taxed: p.amount_taxed_yen,
+        deferred: p.amount_deferred_yen,
+        isPending: true,
+      });
+    }
+  }
 
   return (
     <div className="max-w-5xl mx-auto p-4 md:p-8 w-full">
@@ -321,7 +347,7 @@ export default async function MemberDashboard({
                 <tr>
                   <th className="text-left px-4 py-2 font-medium">紹介先</th>
                   <th className="text-right px-4 py-2 font-medium">予定/実施</th>
-                  <th className="text-left px-4 py-2 font-medium">単価×人数=総額</th>
+                  <th className="text-left px-4 py-2 font-medium">あなたの取り分</th>
                   <th className="text-left px-4 py-2 font-medium">打ち合わせ</th>
                   <th className="text-left px-4 py-2 font-medium">クローザー</th>
                   <th className="text-center px-4 py-2 font-medium">ステータス</th>
@@ -330,7 +356,7 @@ export default async function MemberDashboard({
               <tbody>
                 {tossedUpDeals.map((d) => {
                   const ds = dealStatusLabel(d.status);
-                  const calc = formatHeadcountBreakdown(d.expected_headcount, d.actual_headcount);
+                  const my = myShareByDeal.get(d.id);
                   return (
                     <tr key={d.id} className="border-t border-gray-100">
                       <td className="px-4 py-3 font-medium">
@@ -341,15 +367,22 @@ export default async function MemberDashboard({
                         {d.expected_headcount ?? "—"} / {d.actual_headcount ?? "—"}
                       </td>
                       <td className="px-4 py-3 text-sm">
-                        {calc ? (
-                          <span className={calc.isProspect ? "text-blue-700" : "text-gray-700"}>
-                            {calc.equationText}
-                            {calc.isProspect && (
-                              <span className="text-xs text-gray-400 ml-1">（見込）</span>
-                            )}
-                          </span>
+                        {my ? (
+                          <div>
+                            <span
+                              className={
+                                my.isPending ? "text-blue-700 font-medium" : "font-medium"
+                              }
+                            >
+                              {formatYen(my.taxed)}
+                            </span>
+                            <span className="text-xs text-gray-400 ml-1">
+                              （{(my.ratio * 100).toFixed(0)}%
+                              {my.isPending && "・見込"}）
+                            </span>
+                          </div>
                         ) : (
-                          <span className="text-gray-400">—</span>
+                          <span className="text-gray-400 text-xs">—</span>
                         )}
                       </td>
                       <td className="px-4 py-3 text-gray-600">{formatDate(d.meeting_date)}</td>
@@ -392,7 +425,7 @@ export default async function MemberDashboard({
                   <th className="text-left px-4 py-2 font-medium">紹介先</th>
                   <th className="text-left px-4 py-2 font-medium">トスアップ者</th>
                   <th className="text-right px-4 py-2 font-medium">予定/実施</th>
-                  <th className="text-left px-4 py-2 font-medium">単価×人数=総額</th>
+                  <th className="text-left px-4 py-2 font-medium">あなたの取り分</th>
                   <th className="text-left px-4 py-2 font-medium">打ち合わせ</th>
                   <th className="text-left px-4 py-2 font-medium">クローザー</th>
                   <th className="text-center px-4 py-2 font-medium">ステータス</th>
@@ -406,7 +439,7 @@ export default async function MemberDashboard({
                     tosser?.parent && tosser.parent.id !== member.id
                       ? tosser.parent.name
                       : null;
-                  const calc = formatHeadcountBreakdown(d.expected_headcount, d.actual_headcount);
+                  const my = myShareByDeal.get(d.id);
                   return (
                     <tr key={d.id} className="border-t border-gray-100">
                       <td className="px-4 py-3 font-medium">
@@ -425,15 +458,22 @@ export default async function MemberDashboard({
                         {d.expected_headcount ?? "—"} / {d.actual_headcount ?? "—"}
                       </td>
                       <td className="px-4 py-3 text-sm">
-                        {calc ? (
-                          <span className={calc.isProspect ? "text-blue-700" : "text-gray-700"}>
-                            {calc.equationText}
-                            {calc.isProspect && (
-                              <span className="text-xs text-gray-400 ml-1">（見込）</span>
-                            )}
-                          </span>
+                        {my ? (
+                          <div>
+                            <span
+                              className={
+                                my.isPending ? "text-blue-700 font-medium" : "font-medium"
+                              }
+                            >
+                              {formatYen(my.taxed)}
+                            </span>
+                            <span className="text-xs text-gray-400 ml-1">
+                              （{(my.ratio * 100).toFixed(0)}%
+                              {my.isPending && "・見込"}）
+                            </span>
+                          </div>
                         ) : (
-                          <span className="text-gray-400">—</span>
+                          <span className="text-gray-400 text-xs">—</span>
                         )}
                       </td>
                       <td className="px-4 py-3 text-gray-600">
