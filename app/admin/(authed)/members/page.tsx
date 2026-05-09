@@ -16,12 +16,22 @@ type Row = {
 };
 
 async function loadMembers(): Promise<Row[]> {
+  // 1) メンバー全件
   const { data, error } = await supabaseAdmin
     .from("members")
-    .select("id, name, email, parent_id, is_active, is_closer, access_token, created_at, parent:members!parent_id(id, name)")
+    .select("id, name, email, parent_id, is_active, is_closer, access_token, created_at")
     .order("created_at", { ascending: true });
   if (error) throw error;
-  return (data ?? []) as unknown as Row[];
+
+  // 2) 親名前のマップを作って手動で結合（self-reference の曖昧さを回避）
+  const all = (data ?? []) as Array<Omit<Row, "parent">>;
+  const byId = new Map(all.map((m) => [m.id, m]));
+  return all.map((m) => ({
+    ...m,
+    parent: m.parent_id
+      ? { id: m.parent_id, name: byId.get(m.parent_id)?.name ?? "—" }
+      : null,
+  })) as Row[];
 }
 
 export default async function MembersPage() {

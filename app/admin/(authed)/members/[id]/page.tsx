@@ -7,6 +7,7 @@ import {
   deleteMemberAction,
 } from "../../actions";
 import { CopyButton } from "../../_components/CopyButton";
+import { formatYen, formatDate, dealStatusLabel } from "@/lib/format";
 
 export const dynamic = "force-dynamic";
 
@@ -17,23 +18,205 @@ export default async function MemberDetailPage({
 }) {
   const { id } = await params;
 
-  const [{ data: member }, { data: candidates }] = await Promise.all([
-    supabaseAdmin.from("members").select("*").eq("id", id).maybeSingle(),
-    supabaseAdmin.from("members").select("id, name").neq("id", id).order("name"),
-  ]);
+  const [{ data: member }, { data: candidates }, { data: payouts }, { data: tossedUpDeals }, { data: descendants }] =
+    await Promise.all([
+      supabaseAdmin.from("members").select("*").eq("id", id).maybeSingle(),
+      supabaseAdmin.from("members").select("id, name").neq("id", id).order("name"),
+      supabaseAdmin
+        .from("payouts")
+        .select("*, deal:deals(id, client_name, status, actual_headcount, meeting_date)")
+        .eq("member_id", id)
+        .order("created_at", { ascending: false }),
+      supabaseAdmin
+        .from("deals")
+        .select("id, client_name, status, expected_headcount, actual_headcount, meeting_date, tossed_up_at")
+        .eq("toss_up_member_id", id)
+        .order("tossed_up_at", { ascending: false }),
+      supabaseAdmin.rpc("get_descendants", { p_member_id: id }),
+    ]);
 
   if (!member) notFound();
 
   const baseOrigin = process.env.NEXT_PUBLIC_APP_ORIGIN || "";
   const fullUrl = `${baseOrigin}/r/${member.access_token}`;
 
+  // サマリー集計
+  type PayoutWithDeal = {
+    id: string;
+    amount_taxed_yen: number;
+    amount_deferred_yen: number;
+    receipt_type: "taxed" | "deferred";
+    payment_status: "unpaid" | "scheduled" | "paid";
+    scheduled_payment_date: string | null;
+    paid_at: string | null;
+    tier: number;
+    deal: {
+      id: string;
+      client_name: string;
+      status: string;
+      actual_headcount: number | null;
+      meeting_date: string | null;
+    } | null;
+  };
+  const ps = (payouts ?? []) as unknown as PayoutWithDeal[];
+
+  let chosenTotal = 0;
+  let taxedTotal = 0;
+  let deferredTotal = 0;
+  let unpaidChosen = 0;
+  let scheduledChosen = 0;
+  let paidChosen = 0;
+
+  for (const p of ps) {
+    if (p.deal?.status !== "confirmed") continue;
+    const chosen =
+      p.receipt_type === "deferred" ? p.amount_deferred_yen : p.amount_taxed_yen;
+    chosenTotal += chosen;
+    taxedTotal += p.amount_taxed_yen;
+    deferredTotal += p.amount_deferred_yen;
+    if (p.payment_status === "unpaid") unpaidChosen += chosen;
+    else if (p.payment_status === "scheduled") scheduledChosen += chosen;
+    else if (p.payment_status === "paid") paidChosen += chosen;
+  }
+
+  const tossedUp = tossedUpDeals ?? [];
+  const descendantCount = (descendants ?? []).length;
+
+  const tossedUpStats = {
+    inProgress: tossedUp.filter((d) => d.status === "tossed_up").length,
+    confirmed: tossedUp.filter((d) => d.status === "confirmed").length,
+    canceled: tossedUp.filter((d) => d.status === "canceled").length,
+  };
+
   return (
-    <div className="max-w-xl mx-auto p-4 md:p-8 w-full">
+    <div className="max-w-4xl mx-auto p-4 md:p-8 w-full">
       <div className="mb-4">
         <Link href="/admin/members" className="text-sm text-gray-500 hover:text-gray-900">
           ← 担当者一覧へ
         </Link>
       </div>
+
+      {/* 個別サマリー */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-3 mb-4">
+        <div className="card p-4">
+          <p className="text-xs text-gray-500">受取選択ベース合計</p>
+          <p className="text-2xl font-bold mt-1">{formatYen(chosenTotal)}</p>
+          <p className="text-xs text-gray-400 mt-1">
+            即時 {formatYen(taxedTotal)} / 繰延 {formatYen(deferredTotal)}
+          </p>
+        </div>
+        <div className="card p-4">
+          <p className="text-xs text-gray-500">支払い内訳（選択ベース）</p>
+          <p className="text-sm mt-2">
+            <span className="text-red-700 font-semibold">未払 {formatYen(unpaidChosen)}</span>
+          </p>
+          <p className="text-sm text-blue-700">予定 {formatYen(scheduledChosen)}</p>
+          <p className="text-sm text-green-700">支払済 {formatYen(paidChosen)}</p>
+        </div>
+        <div className="card p-4">
+          <p className="text-xs text-gray-500">トスアップ統計</p>
+          <p className="text-sm mt-2">
+            自分: 進行 {tossedUpStats.inProgress} / 確定 {tossedUpStats.confirmed}
+            {tossedUpStats.canceled > 0 && ` / 取消 ${tossedUpStats.canceled}`}
+          </p>
+          <p className="text-xs text-gray-400 mt-1">
+            配下メンバー数：{descendantCount} 名
+          </p>
+        </div>
+      </div>
+
+      {/* 配分明細 */}
+      {ps.length > 0 && (
+        <div className="card mb-4 overflow-hidden">
+          <div className="px-5 py-3 border-b border-gray-200 flex items-center justify-between">
+            <h2 className="font-semibold">この担当者への配分</h2>
+            <span className="text-xs text-gray-500">{ps.length} 件</span>
+          </div>
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead className="bg-gray-50 text-xs text-gray-500">
+                <tr>
+                  <th className="text-left px-4 py-2 font-medium">案件</th>
+                  <th className="text-center px-4 py-2 font-medium">階層</th>
+                  <th className="text-right px-4 py-2 font-medium">即時</th>
+                  <th className="text-right px-4 py-2 font-medium">繰延</th>
+                  <th className="text-center px-4 py-2 font-medium">受取方式</th>
+                  <th className="text-center px-4 py-2 font-medium">支払</th>
+                </tr>
+              </thead>
+              <tbody>
+                {ps.map((p) => (
+                  <tr key={p.id} className="border-t border-gray-100">
+                    <td className="px-4 py-3">
+                      <p className="font-medium">{p.deal?.client_name ?? "—"}</p>
+                      <p className="text-xs text-gray-400">
+                        実施 {p.deal?.actual_headcount ?? "—"}名
+                      </p>
+                    </td>
+                    <td className="px-4 py-3 text-center text-xs">tier {p.tier}</td>
+                    <td className="px-4 py-3 text-right">{formatYen(p.amount_taxed_yen)}</td>
+                    <td className="px-4 py-3 text-right">{formatYen(p.amount_deferred_yen)}</td>
+                    <td className="px-4 py-3 text-center text-xs">
+                      {p.receipt_type === "deferred" ? "繰延" : "即時"}
+                    </td>
+                    <td className="px-4 py-3 text-center text-xs">
+                      {p.payment_status === "paid"
+                        ? "済"
+                        : p.payment_status === "scheduled"
+                        ? "予定"
+                        : "未"}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
+
+      {/* 自分のトスアップ案件 */}
+      {tossedUp.length > 0 && (
+        <div className="card mb-4 overflow-hidden">
+          <div className="px-5 py-3 border-b border-gray-200 flex items-center justify-between">
+            <h2 className="font-semibold">この担当者がトスアップした案件</h2>
+            <span className="text-xs text-gray-500">{tossedUp.length} 件</span>
+          </div>
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead className="bg-gray-50 text-xs text-gray-500">
+                <tr>
+                  <th className="text-left px-4 py-2 font-medium">紹介先</th>
+                  <th className="text-right px-4 py-2 font-medium">予定/実施</th>
+                  <th className="text-left px-4 py-2 font-medium">打合せ</th>
+                  <th className="text-center px-4 py-2 font-medium">状態</th>
+                </tr>
+              </thead>
+              <tbody>
+                {tossedUp.map((d) => {
+                  const ds = dealStatusLabel(d.status);
+                  return (
+                    <tr key={d.id} className="border-t border-gray-100">
+                      <td className="px-4 py-3">
+                        <p className="font-medium">{d.client_name}</p>
+                        <p className="text-xs text-gray-400">
+                          {formatDate(d.tossed_up_at)}
+                        </p>
+                      </td>
+                      <td className="px-4 py-3 text-right">
+                        {d.expected_headcount ?? "—"} / {d.actual_headcount ?? "—"}
+                      </td>
+                      <td className="px-4 py-3 text-gray-600">{formatDate(d.meeting_date)}</td>
+                      <td className="px-4 py-3 text-center">
+                        <span className={`badge ${ds.cls}`}>{ds.label}</span>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
 
       <div className="card p-6 mb-4">
         <h1 className="text-xl font-bold mb-1">{member.name}</h1>
