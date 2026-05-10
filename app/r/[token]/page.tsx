@@ -10,6 +10,7 @@ import {
 } from "@/lib/format";
 import type { Member, Payout, Deal } from "@/lib/types";
 import { ReceiptTypeSelector } from "./_components/ReceiptTypeSelector";
+import { DefaultReceiptTypeForm } from "./_components/DefaultReceiptTypeForm";
 
 export const dynamic = "force-dynamic";
 
@@ -215,6 +216,17 @@ export default async function MemberDashboard({
           <p className="text-2xl font-semibold mt-1">{formatYen(sum.deferredTotal)}</p>
           <p className="text-xs text-gray-400 mt-2">即時の3倍（54万 / 60万）</p>
         </div>
+      </section>
+
+      {/* 基本受取方式 設定 */}
+      <section className="card mb-4 p-4 flex items-center justify-between gap-3 flex-wrap">
+        <div>
+          <p className="text-sm font-medium">あなたの基本受取方式</p>
+          <p className="text-xs text-gray-500 mt-0.5">
+            この設定が新規案件のデフォルトになります。変更すると未払い／支払予定の配分も自動で切り替わります（支払済みは変わりません）。
+          </p>
+        </div>
+        <DefaultReceiptTypeForm token={token} current={member.default_receipt_type} />
       </section>
 
       {/* 見込みカード（モチベーションUP用） */}

@@ -78,3 +78,26 @@ export async function changeReceiptTypeAction(formData: FormData): Promise<void>
 
   revalidatePath(`/r/${token}`);
 }
+
+/**
+ * 担当者の基本受取方式を変更し、未払い／予定中のpayoutsも一括で同方式に切り替える
+ */
+export async function setDefaultReceiptTypeAction(formData: FormData): Promise<void> {
+  const token = String(formData.get("token") ?? "");
+  const receiptType = String(formData.get("receipt_type") ?? "");
+
+  if (!["taxed", "deferred"].includes(receiptType)) {
+    throw new Error("受取方式が不正です");
+  }
+
+  const member = await findMember(token);
+
+  const { error } = await supabaseAdmin.rpc("set_default_receipt_type", {
+    p_member_id: member.id,
+    p_receipt_type: receiptType,
+    p_apply_to_unpaid: true,
+  });
+  if (error) throw error;
+
+  revalidatePath(`/r/${token}`);
+}

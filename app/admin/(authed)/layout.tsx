@@ -31,6 +31,9 @@ export default function AuthedAdminLayout({
             <Link href="/admin/deals" className="px-3 py-1.5 rounded hover:bg-slate-800">
               案件
             </Link>
+            <Link href="/admin/payments" className="px-3 py-1.5 rounded hover:bg-slate-800">
+              支払い
+            </Link>
             <form action={logoutAction}>
               <button
                 type="submit"
