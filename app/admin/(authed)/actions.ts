@@ -17,6 +17,7 @@ export async function createMemberAction(formData: FormData): Promise<void> {
   const parentIdRaw = String(formData.get("parent_id") ?? "").trim();
   const parent_id = parentIdRaw || null;
   const isCloser = formData.get("is_closer") === "on";
+  const isPayer = formData.get("is_payer") === "on";
 
   if (!name) throw new Error("氏名は必須です");
 
@@ -26,6 +27,7 @@ export async function createMemberAction(formData: FormData): Promise<void> {
     phone,
     parent_id,
     is_closer: isCloser,
+    is_payer: isPayer,
   });
   if (error) throw error;
   revalidatePath("/admin/members");
@@ -42,6 +44,7 @@ export async function updateMemberAction(formData: FormData): Promise<void> {
   const parent_id = parentIdRaw || null;
   const isActive = formData.get("is_active") === "on";
   const isCloser = formData.get("is_closer") === "on";
+  const isPayer = formData.get("is_payer") === "on";
   const notes = String(formData.get("notes") ?? "").trim() || null;
 
   if (!id) throw new Error("ID不正");
@@ -57,6 +60,7 @@ export async function updateMemberAction(formData: FormData): Promise<void> {
       parent_id,
       is_active: isActive,
       is_closer: isCloser,
+      is_payer: isPayer,
       notes,
     })
     .eq("id", id);

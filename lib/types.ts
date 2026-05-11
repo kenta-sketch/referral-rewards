@@ -7,6 +7,7 @@ export type Member = {
   access_token: string;
   is_active: boolean;
   is_closer: boolean;
+  is_payer: boolean;
   default_receipt_type: "taxed" | "deferred";
   notes: string | null;
   created_at: string;

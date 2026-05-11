@@ -66,6 +66,18 @@ export default async function NewMemberPage() {
             </label>
           </div>
 
+          <div className="flex items-center gap-2">
+            <input
+              id="is_payer"
+              name="is_payer"
+              type="checkbox"
+              className="rounded border-gray-300"
+            />
+            <label htmlFor="is_payer" className="text-sm">
+              支払い担当者（支払い管理画面にアクセスできる）
+            </label>
+          </div>
+
           <div className="flex gap-2 pt-2">
             <button type="submit" className="btn-primary">追加</button>
             <Link href="/admin/members" className="btn-secondary">キャンセル</Link>

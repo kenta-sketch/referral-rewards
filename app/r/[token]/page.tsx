@@ -185,9 +185,19 @@ export default async function MemberDashboard({
                 クロージング担当者
               </span>
             )}
+            {member.is_payer && (
+              <span className="badge bg-emerald-100 text-emerald-800 ml-2 align-middle text-xs">
+                支払い担当者
+              </span>
+            )}
           </h1>
         </div>
-        <div className="flex gap-2">
+        <div className="flex gap-2 flex-wrap">
+          {member.is_payer && (
+            <Link href={`/r/${token}/payments`} className="btn-secondary">
+              支払い管理
+            </Link>
+          )}
           {member.is_closer && (
             <Link href={`/r/${token}/closing`} className="btn-secondary">
               クロージング管理
