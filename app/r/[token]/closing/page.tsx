@@ -173,14 +173,27 @@ function DealCard({
       </div>
 
       {mode === "schedule" && (
-        <details className="mt-3">
-          <summary className="text-xs text-slate-700 cursor-pointer hover:underline">
-            操作する
+        <details className="mt-4 group">
+          <summary className="cursor-pointer list-none">
+            <span className="inline-flex items-center gap-2 px-4 py-2.5 rounded-lg bg-slate-900 text-white text-sm font-medium hover:bg-slate-800 transition shadow-sm">
+              <span>この案件を操作する</span>
+              <svg
+                className="w-4 h-4 group-open:rotate-180 transition-transform"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+              </svg>
+            </span>
+            <span className="text-xs text-gray-500 ml-3">
+              打合せ日設定 / 確定（実施人数入力）/ キャンセル
+            </span>
           </summary>
           <div className="mt-3 grid grid-cols-1 md:grid-cols-2 gap-3">
             {/* 打ち合わせ日設定 */}
-            <form action={setMeetingDateAsCloserAction} className="card p-3 bg-gray-50">
-              <p className="text-xs font-semibold mb-2">打ち合わせ日を更新</p>
+            <form action={setMeetingDateAsCloserAction} className="card p-4 bg-blue-50 border border-blue-200">
+              <p className="text-sm font-semibold mb-2 text-blue-900">打ち合わせ日を更新</p>
               <input type="hidden" name="token" value={token} />
               <input type="hidden" name="deal_id" value={deal.id} />
               <input
@@ -189,14 +202,14 @@ function DealCard({
                 defaultValue={deal.meeting_date ?? ""}
                 className="input text-sm mb-2"
               />
-              <button type="submit" className="btn-secondary text-xs w-full">
+              <button type="submit" className="btn-secondary text-sm w-full">
                 日付を保存
               </button>
             </form>
 
             {/* 確定 */}
-            <form action={confirmDealAsCloserAction} className="card p-3 bg-green-50">
-              <p className="text-xs font-semibold mb-2">確定（配分計算）</p>
+            <form action={confirmDealAsCloserAction} className="card p-4 bg-green-50 border border-green-200">
+              <p className="text-sm font-semibold mb-2 text-green-900">確定（配分計算）</p>
               <input type="hidden" name="token" value={token} />
               <input type="hidden" name="deal_id" value={deal.id} />
               <input type="hidden" name="meeting_date" value={deal.meeting_date ?? ""} />
@@ -209,16 +222,19 @@ function DealCard({
                 required
                 className="input text-sm mb-2"
               />
-              <button type="submit" className="btn-primary text-xs w-full">
+              <button type="submit" className="btn-primary text-sm w-full">
                 確定して配分計算
               </button>
             </form>
           </div>
 
-          <form action={cancelDealAsCloserAction} className="mt-2">
+          <form action={cancelDealAsCloserAction} className="mt-3">
             <input type="hidden" name="token" value={token} />
             <input type="hidden" name="deal_id" value={deal.id} />
-            <button type="submit" className="text-xs text-red-700 hover:underline">
+            <button
+              type="submit"
+              className="text-xs px-3 py-1.5 rounded border border-red-200 text-red-700 hover:bg-red-50"
+            >
               この案件をキャンセルする
             </button>
           </form>

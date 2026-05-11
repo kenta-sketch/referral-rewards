@@ -32,15 +32,32 @@ export function ReceiptTypeSelector({
     });
   }
 
+  const isTaxed = current === "taxed";
   return (
-    <select
-      className="rounded-md border border-gray-300 text-xs px-2 py-1 disabled:bg-gray-100 disabled:text-gray-500"
-      value={current}
-      onChange={onChange}
-      disabled={disabled || pending}
-    >
-      <option value="taxed">即時（税込）</option>
-      <option value="deferred">繰延（×3）</option>
-    </select>
+    <div className="inline-block relative">
+      <select
+        className={`appearance-none rounded-lg border-2 text-xs font-medium px-3 py-1.5 pr-7 cursor-pointer transition shadow-sm
+          disabled:bg-gray-100 disabled:text-gray-400 disabled:border-gray-200 disabled:cursor-not-allowed
+          ${
+            isTaxed
+              ? "border-slate-700 bg-white text-slate-900 hover:bg-slate-50"
+              : "border-amber-500 bg-amber-50 text-amber-900 hover:bg-amber-100"
+          }`}
+        value={current}
+        onChange={onChange}
+        disabled={disabled || pending}
+      >
+        <option value="taxed">即時（税込）</option>
+        <option value="deferred">繰延（×3）</option>
+      </select>
+      <svg
+        className="w-3 h-3 absolute right-2 top-1/2 -translate-y-1/2 pointer-events-none"
+        fill="none"
+        stroke="currentColor"
+        viewBox="0 0 24 24"
+      >
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+      </svg>
+    </div>
   );
 }
