@@ -220,12 +220,10 @@ export default async function MemberDashboard({
         <div className="card p-5">
           <p className="text-xs text-gray-500">即時受取（税込）でまとめると</p>
           <p className="text-2xl font-semibold mt-1">{formatYen(sum.taxedTotal)}</p>
-          <p className="text-xs text-gray-400 mt-2">49名まで18万 / 50名以上20万</p>
         </div>
         <div className="card p-5 bg-gradient-to-br from-amber-50 to-white">
-          <p className="text-xs text-amber-700">繰延受取（翌年以降・3倍）</p>
+          <p className="text-xs text-amber-700">繰延受取（翌年以降）</p>
           <p className="text-2xl font-semibold mt-1">{formatYen(sum.deferredTotal)}</p>
-          <p className="text-xs text-gray-400 mt-2">即時の3倍（54万 / 60万）</p>
         </div>
       </section>
 
@@ -260,7 +258,7 @@ export default async function MemberDashboard({
             </div>
           </div>
           <p className="text-xs text-gray-400 mt-2">
-            ※ 確定すると人数によって金額が動きます。打ち合わせ完了でこの見込みが現実に変わります。
+            ※ 打ち合わせ完了で確定すると、この見込みが正式な金額に変わります。
           </p>
         </section>
       )}
@@ -298,7 +296,7 @@ export default async function MemberDashboard({
                 <tr>
                   <th className="text-left px-4 py-2 font-medium">案件</th>
                   <th className="text-right px-4 py-2 font-medium">即時（税込）</th>
-                  <th className="text-right px-4 py-2 font-medium">繰延（×3）</th>
+                  <th className="text-right px-4 py-2 font-medium">繰延</th>
                   <th className="text-center px-4 py-2 font-medium">受取方式</th>
                   <th className="text-center px-4 py-2 font-medium">支払い</th>
                 </tr>
@@ -402,10 +400,9 @@ export default async function MemberDashboard({
                             >
                               {formatYen(my.taxed)}
                             </span>
-                            <span className="text-xs text-gray-400 ml-1">
-                              （{(my.ratio * 100).toFixed(0)}%
-                              {my.isPending && "・見込"}）
-                            </span>
+                            {my.isPending && (
+                              <span className="text-xs text-gray-400 ml-1">（見込）</span>
+                            )}
                           </div>
                         ) : (
                           <span className="text-gray-400 text-xs">—</span>
@@ -493,10 +490,9 @@ export default async function MemberDashboard({
                             >
                               {formatYen(my.taxed)}
                             </span>
-                            <span className="text-xs text-gray-400 ml-1">
-                              （{(my.ratio * 100).toFixed(0)}%
-                              {my.isPending && "・見込"}）
-                            </span>
+                            {my.isPending && (
+                              <span className="text-xs text-gray-400 ml-1">（見込）</span>
+                            )}
                           </div>
                         ) : (
                           <span className="text-gray-400 text-xs">—</span>

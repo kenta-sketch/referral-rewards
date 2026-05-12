@@ -95,7 +95,7 @@ export default async function CloserPage({
       )}
 
       <p className="text-xs text-gray-400 mt-8 text-center">
-        単価ルール：49名まで1人18万円 / 50名以上1人20万円。実施人数で確定すると配分が自動計算されます。
+        実施人数で確定すると配分が自動計算されます。
       </p>
     </div>
   );

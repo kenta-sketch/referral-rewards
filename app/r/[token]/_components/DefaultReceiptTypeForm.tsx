@@ -17,7 +17,7 @@ export function DefaultReceiptTypeForm({
     if (
       !confirm(
         value === "deferred"
-          ? "基本受取を「繰延（×3・翌年以降）」に変更します。\n未払い／支払予定の配分もすべて繰延に切り替わります。\nよろしいですか？"
+          ? "基本受取を「繰延（翌年以降）」に変更します。\n未払い／支払予定の配分もすべて繰延に切り替わります。\nよろしいですか？"
           : "基本受取を「即時（税込）」に変更します。\n未払い／支払予定の配分もすべて即時に切り替わります。\nよろしいですか？"
       )
     ) {
@@ -80,10 +80,10 @@ export function DefaultReceiptTypeForm({
           >
             {current === "deferred" && <span className="w-2 h-2 rounded-full bg-amber-600" />}
           </span>
-          <p className="font-semibold text-sm">繰延受取（×3）</p>
+          <p className="font-semibold text-sm">繰延受取</p>
         </div>
         <p className={`text-xs mt-1 ${current === "deferred" ? "text-amber-50" : "text-gray-500"}`}>
-          翌年以降に3倍受取
+          翌年以降に受取
         </p>
       </button>
     </div>

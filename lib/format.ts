@@ -52,7 +52,7 @@ export function paymentStatusLabel(s: string): { label: string; cls: string } {
 }
 
 export function receiptTypeLabel(s: string): string {
-  return s === "deferred" ? "繰延（翌年以降・3倍）" : "即時受取（税込）";
+  return s === "deferred" ? "繰延受取（翌年以降）" : "即時受取（税込）";
 }
 
 /**

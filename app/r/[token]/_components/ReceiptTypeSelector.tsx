@@ -48,7 +48,7 @@ export function ReceiptTypeSelector({
         disabled={disabled || pending}
       >
         <option value="taxed">即時（税込）</option>
-        <option value="deferred">繰延（×3）</option>
+        <option value="deferred">繰延</option>
       </select>
       <svg
         className="w-3 h-3 absolute right-2 top-1/2 -translate-y-1/2 pointer-events-none"
