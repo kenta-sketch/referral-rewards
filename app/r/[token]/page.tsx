@@ -11,6 +11,7 @@ import {
 import type { Member, Payout, Deal } from "@/lib/types";
 import { ReceiptTypeSelector } from "./_components/ReceiptTypeSelector";
 import { DefaultReceiptTypeForm } from "./_components/DefaultReceiptTypeForm";
+import { UserGuide } from "./_components/UserGuide";
 
 export const dynamic = "force-dynamic";
 
@@ -227,6 +228,9 @@ export default async function MemberDashboard({
           <p className="text-xs text-gray-400 mt-2">即時の3倍（54万 / 60万）</p>
         </div>
       </section>
+
+      {/* 使い方ガイド（権限別） */}
+      <UserGuide isCloser={member.is_closer} isPayer={member.is_payer} />
 
       {/* 基本受取方式 設定 */}
       <section className="card mb-4 p-4 flex items-center justify-between gap-3 flex-wrap">
