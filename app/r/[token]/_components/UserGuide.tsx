@@ -90,53 +90,7 @@ export function UserGuide({
             <b>「あなたがトスアップした案件」</b>はご自身が登録した案件の進捗。打ち合わせ日とクローザー名、ステータスがわかります。
           </p>
           <p className="mt-2">
-            <b>「配下メンバーのトスアップ案件」</b>はあなたの紹介ツリーの配下メンバーが登録した案件。あなたへの取り分（25%や12.5%など）も併記されます。
-          </p>
-        </Section>
-
-        <Section step="6" title="単価ルール">
-          <table className="w-full text-xs mt-2 border border-gray-200">
-            <thead className="bg-gray-50">
-              <tr>
-                <th className="px-2 py-1 border border-gray-200">実施人数</th>
-                <th className="px-2 py-1 border border-gray-200">即時（税込）</th>
-                <th className="px-2 py-1 border border-gray-200">繰延（×3）</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr>
-                <td className="px-2 py-1 border border-gray-200">49名まで</td>
-                <td className="px-2 py-1 border border-gray-200">18万円 / 1人</td>
-                <td className="px-2 py-1 border border-gray-200">54万円 / 1人</td>
-              </tr>
-              <tr>
-                <td className="px-2 py-1 border border-gray-200">50名以上</td>
-                <td className="px-2 py-1 border border-gray-200">20万円 / 1人</td>
-                <td className="px-2 py-1 border border-gray-200">60万円 / 1人</td>
-              </tr>
-            </tbody>
-          </table>
-          <p className="text-xs text-gray-500 mt-2">
-            50名を超えると全員分の単価が20万円に上がります（境目で大きく変わるので意識しておくと得です）。
-          </p>
-        </Section>
-
-        <Section step="7" title="階層別の取り分">
-          <p>紹介ツリーの位置によって、案件総額に対するあなたの取り分が決まります。</p>
-          <ul className="list-disc pl-5 mt-2 space-y-1">
-            <li>
-              <b>ツリーの頂点</b>：常に <b>50%</b>（最下層がトスアップした場合）
-            </li>
-            <li>
-              <b>トスアップ者（最下層）</b>：常に <b>25%</b>（直接紹介者なら50%または100%）
-            </li>
-            <li>
-              <b>中間層</b>：残り 25% を等分
-            </li>
-          </ul>
-          <p className="text-xs text-gray-500 mt-2">
-            例：第3階層がトスアップ →トスアップ者25% / 中間層（親）25% / 頂点 50%。<br />
-            例：第4階層がトスアップ → トスアップ者25% / 中間層2人で 12.5%ずつ / 頂点 50%。
+            <b>「配下メンバーのトスアップ案件」</b>はあなたの紹介ツリーの配下メンバーが登録した案件。あなたへの取り分が併記されます。
           </p>
         </Section>
 
