@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { supabaseAdmin } from "@/lib/supabase";
+import { sendTossUpNotificationEmail } from "@/lib/email";
 
 async function findMember(token: string) {
   const { data, error } = await supabaseAdmin
@@ -38,6 +39,32 @@ export async function registerTossUpAction(formData: FormData): Promise<void> {
     status: "tossed_up",
   });
   if (error) throw error;
+
+  // クロージング担当者にメール通知
+  const { data: tosser } = await supabaseAdmin
+    .from("members")
+    .select("name")
+    .eq("id", member.id)
+    .maybeSingle();
+
+  const { data: closers } = await supabaseAdmin
+    .from("members")
+    .select("name, email, access_token")
+    .eq("is_closer", true)
+    .eq("is_active", true);
+
+  for (const c of closers ?? []) {
+    if (!c.email) continue;
+    await sendTossUpNotificationEmail({
+      to: c.email,
+      closerName: c.name,
+      accessToken: c.access_token,
+      clientName,
+      tosserName: tosser?.name ?? "—",
+      expectedHeadcount,
+      notes: notes || null,
+    });
+  }
 
   revalidatePath(`/r/${token}`);
   redirect(`/r/${token}`);

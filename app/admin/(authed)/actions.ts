@@ -4,6 +4,11 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { supabaseAdmin } from "@/lib/supabase";
 import { requireAdmin } from "@/lib/auth";
+import {
+  sendWelcomeEmail,
+  sendPayoutConfirmedEmail,
+  sendTossUpNotificationEmail,
+} from "@/lib/email";
 
 // =====================
 // メンバー操作
@@ -21,15 +26,29 @@ export async function createMemberAction(formData: FormData): Promise<void> {
 
   if (!name) throw new Error("氏名は必須です");
 
-  const { error } = await supabaseAdmin.from("members").insert({
-    name,
-    email,
-    phone,
-    parent_id,
-    is_closer: isCloser,
-    is_payer: isPayer,
-  });
+  const { data: created, error } = await supabaseAdmin
+    .from("members")
+    .insert({
+      name,
+      email,
+      phone,
+      parent_id,
+      is_closer: isCloser,
+      is_payer: isPayer,
+    })
+    .select("id, name, email, access_token")
+    .single();
   if (error) throw error;
+
+  // ウェルカムメール送信（メアドありなら）
+  if (created.email) {
+    await sendWelcomeEmail({
+      to: created.email,
+      name: created.name,
+      accessToken: created.access_token,
+    });
+  }
+
   revalidatePath("/admin/members");
   redirect("/admin/members");
 }
@@ -133,9 +152,81 @@ export async function confirmDealAction(formData: FormData): Promise<void> {
     p_meeting_date: meeting_date,
   });
   if (error) throw error;
+
+  // 各受取者にメール通知
+  await notifyPayoutsConfirmed(id);
+
   revalidatePath("/admin/deals");
   revalidatePath(`/admin/deals/${id}`);
   revalidatePath("/admin");
+}
+
+async function notifyPayoutsConfirmed(dealId: string) {
+  const { data: deal } = await supabaseAdmin
+    .from("deals")
+    .select("client_name")
+    .eq("id", dealId)
+    .maybeSingle();
+  if (!deal) return;
+
+  const { data: payouts } = await supabaseAdmin
+    .from("payouts")
+    .select(
+      "amount_taxed_yen, amount_deferred_yen, receipt_type, member:members!member_id(name, email, access_token)"
+    )
+    .eq("deal_id", dealId);
+
+  type Row = {
+    amount_taxed_yen: number;
+    amount_deferred_yen: number;
+    receipt_type: "taxed" | "deferred";
+    member: { name: string; email: string | null; access_token: string } | null;
+  };
+  for (const p of (payouts ?? []) as unknown as Row[]) {
+    if (!p.member?.email) continue;
+    const amt =
+      p.receipt_type === "deferred" ? p.amount_deferred_yen : p.amount_taxed_yen;
+    await sendPayoutConfirmedEmail({
+      to: p.member.email,
+      name: p.member.name,
+      accessToken: p.member.access_token,
+      clientName: deal.client_name,
+      amountYen: amt,
+      receiptType: p.receipt_type,
+    });
+  }
+}
+
+async function notifyClosersOfTossUp(opts: {
+  clientName: string;
+  tossUpMemberId: string;
+  expectedHeadcount: number | null;
+  notes: string | null;
+}) {
+  const { data: tosser } = await supabaseAdmin
+    .from("members")
+    .select("name")
+    .eq("id", opts.tossUpMemberId)
+    .maybeSingle();
+
+  const { data: closers } = await supabaseAdmin
+    .from("members")
+    .select("name, email, access_token")
+    .eq("is_closer", true)
+    .eq("is_active", true);
+
+  for (const c of closers ?? []) {
+    if (!c.email) continue;
+    await sendTossUpNotificationEmail({
+      to: c.email,
+      closerName: c.name,
+      accessToken: c.access_token,
+      clientName: opts.clientName,
+      tosserName: tosser?.name ?? "—",
+      expectedHeadcount: opts.expectedHeadcount,
+      notes: opts.notes,
+    });
+  }
 }
 
 export async function setMeetingDateAction(formData: FormData): Promise<void> {
@@ -204,6 +295,15 @@ export async function createDealAction(formData: FormData): Promise<void> {
     status: "tossed_up",
   });
   if (error) throw error;
+
+  // クロージング担当者にメール通知
+  await notifyClosersOfTossUp({
+    clientName: client_name,
+    tossUpMemberId: toss_up_member_id,
+    expectedHeadcount: expected_headcount,
+    notes,
+  });
+
   revalidatePath("/admin/deals");
   redirect("/admin/deals");
 }

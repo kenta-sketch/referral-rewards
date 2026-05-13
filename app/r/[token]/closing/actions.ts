@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { supabaseAdmin } from "@/lib/supabase";
+import { sendPayoutConfirmedEmail } from "@/lib/email";
 
 async function findCloser(token: string) {
   const { data, error } = await supabaseAdmin
@@ -57,6 +58,40 @@ export async function confirmDealAsCloserAction(formData: FormData): Promise<voi
     p_meeting_date: meeting_date,
   });
   if (error) throw error;
+
+  // 配分された各受取者にメール通知
+  const { data: deal } = await supabaseAdmin
+    .from("deals")
+    .select("client_name")
+    .eq("id", dealId)
+    .maybeSingle();
+  if (deal) {
+    const { data: payouts } = await supabaseAdmin
+      .from("payouts")
+      .select(
+        "amount_taxed_yen, amount_deferred_yen, receipt_type, member:members!member_id(name, email, access_token)"
+      )
+      .eq("deal_id", dealId);
+    type Row = {
+      amount_taxed_yen: number;
+      amount_deferred_yen: number;
+      receipt_type: "taxed" | "deferred";
+      member: { name: string; email: string | null; access_token: string } | null;
+    };
+    for (const p of (payouts ?? []) as unknown as Row[]) {
+      if (!p.member?.email) continue;
+      const amt =
+        p.receipt_type === "deferred" ? p.amount_deferred_yen : p.amount_taxed_yen;
+      await sendPayoutConfirmedEmail({
+        to: p.member.email,
+        name: p.member.name,
+        accessToken: p.member.access_token,
+        clientName: deal.client_name,
+        amountYen: amt,
+        receiptType: p.receipt_type,
+      });
+    }
+  }
 
   revalidatePath(`/r/${token}/closing`);
   revalidatePath(`/r/${token}`);
