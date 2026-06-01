@@ -88,6 +88,42 @@ export async function updateMemberAction(formData: FormData): Promise<void> {
   revalidatePath(`/admin/members/${id}`);
 }
 
+// =====================
+// デモデータ操作（sales-tracker のような新規環境向け）
+// =====================
+
+export async function seedDemoDataAction(): Promise<void> {
+  await requireAdmin();
+  const { error } = await supabaseAdmin.rpc("seed_demo_data");
+  if (error) {
+    throw new Error(
+      error.message?.includes("does not exist")
+        ? "デモデータ関数（seed_demo_data）が未設定です。本番環境では利用できません。"
+        : error.message
+    );
+  }
+  revalidatePath("/admin/members");
+  revalidatePath("/admin/deals");
+  revalidatePath("/admin");
+  redirect("/admin/members");
+}
+
+export async function resetAllDataAction(): Promise<void> {
+  await requireAdmin();
+  const { error } = await supabaseAdmin.rpc("reset_all_data");
+  if (error) {
+    throw new Error(
+      error.message?.includes("does not exist")
+        ? "リセット関数（reset_all_data）が未設定です。本番環境では利用できません。"
+        : error.message
+    );
+  }
+  revalidatePath("/admin/members");
+  revalidatePath("/admin/deals");
+  revalidatePath("/admin");
+  redirect("/admin");
+}
+
 export async function deleteMemberAction(formData: FormData): Promise<void> {
   await requireAdmin();
   const id = String(formData.get("id") ?? "");

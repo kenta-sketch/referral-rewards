@@ -375,12 +375,14 @@ export default async function MemberDashboard({
                   <th className="text-left px-4 py-2 font-medium">打ち合わせ</th>
                   <th className="text-left px-4 py-2 font-medium">クローザー</th>
                   <th className="text-center px-4 py-2 font-medium">ステータス</th>
+                  <th className="text-right px-4 py-2 font-medium"></th>
                 </tr>
               </thead>
               <tbody>
                 {tossedUpDeals.map((d) => {
                   const ds = dealStatusLabel(d.status);
                   const my = myShareByDeal.get(d.id);
+                  const canEdit = d.status === "tossed_up";
                   return (
                     <tr key={d.id} className="border-t border-gray-100">
                       <td className="px-4 py-3 font-medium">
@@ -412,6 +414,18 @@ export default async function MemberDashboard({
                       <td className="px-4 py-3 text-gray-600">{d.closer_member?.name ?? "—"}</td>
                       <td className="px-4 py-3 text-center">
                         <span className={`badge ${ds.cls}`}>{ds.label}</span>
+                      </td>
+                      <td className="px-4 py-3 text-right">
+                        {canEdit ? (
+                          <Link
+                            href={`/r/${token}/deals/${d.id}/edit`}
+                            className="text-xs px-2.5 py-1 rounded border border-gray-300 hover:bg-gray-50 inline-block"
+                          >
+                            編集
+                          </Link>
+                        ) : (
+                          <span className="text-xs text-gray-300">—</span>
+                        )}
                       </td>
                     </tr>
                   );

@@ -107,6 +107,87 @@ export async function changeReceiptTypeAction(formData: FormData): Promise<void>
 }
 
 /**
+ * 自分がトスアップした案件を編集（トスアップ中のみ可）
+ */
+export async function updateMyTossUpAction(formData: FormData): Promise<void> {
+  const token = String(formData.get("token") ?? "");
+  const dealId = String(formData.get("deal_id") ?? "");
+  const clientName = String(formData.get("client_name") ?? "").trim();
+  const expectedRaw = String(formData.get("expected_headcount") ?? "").trim();
+  const expected_headcount = expectedRaw ? Number(expectedRaw) : null;
+  const notes = String(formData.get("notes") ?? "").trim() || null;
+
+  if (!dealId) throw new Error("案件IDが不正です");
+  if (!clientName) throw new Error("紹介先名は必須です");
+  if (expected_headcount !== null && (!Number.isFinite(expected_headcount) || expected_headcount < 0)) {
+    throw new Error("人数は0以上の整数で入力してください");
+  }
+
+  const member = await findMember(token);
+
+  // 案件取得：本人がトスアップした&&トスアップ中である事を確認
+  const { data: deal, error: dErr } = await supabaseAdmin
+    .from("deals")
+    .select("id, toss_up_member_id, status")
+    .eq("id", dealId)
+    .maybeSingle();
+  if (dErr) throw dErr;
+  if (!deal) throw new Error("案件が見つかりません");
+  if (deal.toss_up_member_id !== member.id) {
+    throw new Error("この案件を編集する権限がありません");
+  }
+  if (deal.status !== "tossed_up") {
+    throw new Error("確定済みまたはキャンセル済みの案件は編集できません。管理者にご連絡ください。");
+  }
+
+  const { error } = await supabaseAdmin
+    .from("deals")
+    .update({
+      client_name: clientName,
+      expected_headcount,
+      notes,
+    })
+    .eq("id", dealId);
+  if (error) throw error;
+
+  revalidatePath(`/r/${token}`);
+  redirect(`/r/${token}`);
+}
+
+/**
+ * 自分がトスアップした案件をキャンセル（トスアップ中のみ可）
+ */
+export async function cancelMyTossUpAction(formData: FormData): Promise<void> {
+  const token = String(formData.get("token") ?? "");
+  const dealId = String(formData.get("deal_id") ?? "");
+  if (!dealId) throw new Error("案件IDが不正です");
+
+  const member = await findMember(token);
+
+  const { data: deal, error: dErr } = await supabaseAdmin
+    .from("deals")
+    .select("id, toss_up_member_id, status")
+    .eq("id", dealId)
+    .maybeSingle();
+  if (dErr) throw dErr;
+  if (!deal) throw new Error("案件が見つかりません");
+  if (deal.toss_up_member_id !== member.id) {
+    throw new Error("この案件をキャンセルする権限がありません");
+  }
+  if (deal.status !== "tossed_up") {
+    throw new Error("確定済みまたはキャンセル済みの案件は変更できません。管理者にご連絡ください。");
+  }
+
+  const { error } = await supabaseAdmin
+    .from("deals")
+    .update({ status: "canceled" })
+    .eq("id", dealId);
+  if (error) throw error;
+
+  revalidatePath(`/r/${token}`);
+}
+
+/**
  * 担当者の基本受取方式を変更し、未払い／予定中のpayoutsも一括で同方式に切り替える
  */
 export async function setDefaultReceiptTypeAction(formData: FormData): Promise<void> {
